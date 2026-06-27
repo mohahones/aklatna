@@ -77,10 +77,11 @@ export default function App() {
         </div>
       </div>
     );
+    
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/aklatna">
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
