@@ -81,7 +81,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter basename="/aklatna">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
