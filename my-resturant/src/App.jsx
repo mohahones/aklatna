@@ -81,7 +81,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename="/aklatna">
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route
