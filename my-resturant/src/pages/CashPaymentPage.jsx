@@ -4,6 +4,7 @@ import { SidebarSection } from "../components/CashPayment/SidebarSection";
 import { FilterSection } from "../components/CashPayment/FilterSection";
 import { StatisticCard } from "../components/CashPayment/StatisticCard";
 import { RequestsTable } from "../components/CashPayment/RequestsTable";
+import { DailyStatsSection } from "../components/CashPayment/DailyStatsSection";
 import { ToastNotification } from "../components/CashPayment/ToastNotification";
 import { isSameDay } from "../utils/cashPaymentUtils";
 
@@ -51,6 +52,40 @@ export default function CashPaymentPage({ onLogout }) {
       return request.status === "accepted" && requestDate && isSameDay(requestDate, new Date());
     })
     .reduce((sum, request) => sum + request.amount, 0);
+
+  // Daily Stats
+  const dailyStats = useMemo(() => {
+    const statsMap = new Map();
+
+    requests.forEach((request) => {
+      const dateStr = request.createdAt 
+        ? new Date(request.createdAt).toLocaleDateString("ar-SA", { 
+            year: "numeric", 
+            month: "long", 
+            day: "numeric" 
+          })
+        : "غير محدد";
+
+      if (!statsMap.has(dateStr)) {
+        statsMap.set(dateStr, {
+          date: dateStr,
+          collected: 0,
+          accepted: 0,
+          rejected: 0,
+        });
+      }
+
+      const stat = statsMap.get(dateStr);
+      if (request.status === "accepted") {
+        stat.collected += request.amount;
+        stat.accepted += 1;
+      } else if (request.status === "rejected") {
+        stat.rejected += 1;
+      }
+    });
+
+    return Array.from(statsMap.values()).reverse();
+  }, [requests]);
 
   // Handlers
   function toggleStatus(status) {
@@ -170,6 +205,9 @@ export default function CashPaymentPage({ onLogout }) {
               onApprove={(id) => handleAction(id, "approve")}
               onReject={(id) => handleAction(id, "reject")}
             />
+
+            {/* Daily Stats */}
+            <DailyStatsSection dailyStats={dailyStats} />
           </div>
 
           {/* Toast */}
