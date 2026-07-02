@@ -1,114 +1,35 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import MaterialIcon from "../components/ui/MaterialIcon";
-import { isSupabaseConfigured, supabase } from "../supabaseClient";
+import { useSignupForm } from "../hooks/useSignupForm";
 
-export default function AccountPage({ currentUser }) {
+export default function AccountPage() {
     const location = useLocation();
+    const navigate = useNavigate();
     const signupData = location.state?.signupData;
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { isSubmitting, status, message, handleSignup } = useSignupForm({
+        onSuccess: () => {
+            setIsSubmitted(true);
+            window.sessionStorage.removeItem("auth-signup-current-step");
+            window.sessionStorage.removeItem("auth-signup-step1-form");
+            window.sessionStorage.removeItem("auth-signup-step1-confirmed");
+            window.sessionStorage.removeItem("auth-signup-step2-hours");
+            setTimeout(() => {
+                navigate("/dashboard", { replace: true });
+            }, 2000);
+        },
+    });
     const [submitMessage, setSubmitMessage] = useState("");
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
-    async function handleSubscribe() {
-        if (!isSupabaseConfigured || !supabase) {
-            setSubmitMessage("خدمة Supabase غير متاحة حالياً");
+    function handleSubscribe() {
+        if (!signupData) {
+            setSubmitMessage("بيانات التسجيل غير متوفرة.");
             return;
         }
 
-        setIsSubmitting(true);
-        setSubmitMessage("");
-
-        try {
-            if (!signupData?.email || !signupData?.password) {
-                throw new Error("بيانات التسجيل غير متوفرة.");
-            }
-
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
-                email: signupData.email,
-                password: signupData.password,
-                options: {
-                    data: {
-                        role: "restaurant",
-                        restaurantName: signupData.restaurantName || "",
-                        phone: signupData.phone || "",
-                        address: signupData.address || "",
-                        is_active: false,
-                    },
-                },
-            });
-
-            if (signUpError) {
-                throw new Error(signUpError.message || "فشل إنشاء الحساب");
-            }
-
-            const userId = authData?.user?.id;
-            if (!userId) {
-                throw new Error("لم يتم إنشاء المستخدم بنجاح.");
-            }
-
-            const restaurantName = signupData.restaurantName || currentUser?.user_metadata?.restaurantName || currentUser?.user_metadata?.business_name || signupData.email || "مطعم غير مسجل";
-            const address = signupData.address || currentUser?.user_metadata?.address || "";
-            const phone = signupData.phone || currentUser?.user_metadata?.phone || "";
-            const openingHours = signupData?.openingHours || [];
-            const orderDate = new Date().toISOString();
-
-            const { error: businessError } = await supabase
-                .from("businesses")
-                .insert(
-                    {
-                        id: userId,
-                        name_ar: restaurantName,
-                        name: restaurantName,
-                        phone,
-                        address,
-                        created_at: orderDate,
-                        is_active: false,
-                    },
-                    { onConflict: "id" }
-                );
-
-            if (businessError) {
-                throw new Error(businessError.message || "فشل إرسال الطلب إلى Supabase");
-            }
-
-            const daysMapping = [
-                { name: "الإثنين", index: 1 },
-                { name: "الثلاثاء", index: 2 },
-                { name: "الأربعاء", index: 3 },
-                { name: "الخميس", index: 4 },
-                { name: "الجمعة", index: 5 },
-                { name: "السبت", index: 6 },
-                { name: "الأحد", index: 7 }
-            ];
-
-            const restaurantHoursRows = daysMapping.map(({ name, index }) => {
-                const dayEntry = openingHours?.find((entry) => entry.day === name);
-
-                return {
-                    user_id: userId,
-                    // هنا قمنا بالحل: نرسل الرقم (index)، وإذا كان العمود نصاً سيقبله كـ "1"
-                    day_of_week: index,
-                    open_time: dayEntry?.isOpen ? dayEntry.openTime : null,
-                    close_time: dayEntry?.isOpen ? dayEntry.closeTime : null,
-                    is_closed: dayEntry ? !dayEntry.isOpen : true
-                };
-            });
-
-            const { error: hoursError } = await supabase.from("restaurant_hours").insert(restaurantHoursRows);
-
-            if (hoursError) {
-                throw new Error(hoursError.message || "فشل حفظ ساعات العمل");
-            }
-
-            setIsSubmitted(true);
-            setSubmitMessage("تم إرسال الطلب بنجاح");
-        } catch (error) {
-            setIsSubmitted(false);
-            setSubmitMessage(error instanceof Error ? error.message : "حدث خطأ غير متوقع");
-        } finally {
-            setIsSubmitting(false);
-        }
+        // إرسال كل البيانات للـ useSignupForm
+        handleSignup(signupData);
     }
 
     return (
@@ -148,6 +69,20 @@ export default function AccountPage({ currentUser }) {
                             </div>
                         </div>
 
+                        {signupData && (
+                            <div className="mb-8 rounded-lg bg-primary-fixed p-4 text-right">
+                                <h3 className="mb-4 font-headline-sm text-headline-sm text-on-primary-fixed">بيانات مطعمك</h3>
+                                <div className="space-y-2 text-sm font-body-sm">
+                                    <p><strong>الاسم (العربي):</strong> {signupData.restaurantName}</p>
+                                    <p><strong>الاسم (الإنجليزي):</strong> {signupData.restaurantNameEn}</p>
+                                    <p><strong>النوع:</strong> {signupData.businessType === 'restaurant' ? 'مطعم' : 'محل عصير'}</p>
+                                    <p><strong>البريد الإلكتروني:</strong> {signupData.email}</p>
+                                    <p><strong>الهاتف:</strong> {signupData.phone}</p>
+                                    <p><strong>العنوان:</strong> {signupData.address}</p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mb-8 space-y-4">
                             {[
                                 "طلبات غير محدودة",
@@ -179,9 +114,9 @@ export default function AccountPage({ currentUser }) {
                             <MaterialIcon name={isSubmitting ? "hourglass_top" : isSubmitted ? "check_circle" : "arrow_back"} className="text-xl" />
                         </button>
 
-                        {submitMessage ? (
-                            <p className={`mt-3 text-sm font-medium ${isSubmitted ? "text-success-green" : "text-error-red"}`}>
-                                {submitMessage}
+                        {submitMessage || message ? (
+                            <p className={`mt-3 text-sm font-medium ${isSubmitted || status === "success" ? "text-success-green" : "text-error-red"}`}>
+                                {submitMessage || message}
                             </p>
                         ) : null}
 

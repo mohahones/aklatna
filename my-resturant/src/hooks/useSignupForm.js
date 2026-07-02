@@ -157,6 +157,7 @@ export function useSignupForm({ onSuccess } = {}) {
     let coverUrl = "";
 
    try {
+      // =============== المرحلة 2: رفع الصور إلى Storage ===============
       if (formData.logoFile instanceof File) {
         const compressedLogo = await compressLogo(formData.logoFile);
         uploadedLogoPath = buildLogoPath(compressedLogo);
@@ -191,7 +192,37 @@ export function useSignupForm({ onSuccess } = {}) {
         coverUrl = publicData.publicUrl;
       }
 
-      // 1. الخطوة الأولى: إنشاء الحساب الأساسي بالإيميل والباسورد فقط (حذفنا كائن options)
+      // =============== المرحلة 3: تحضير بيانات ساعات العمل ===============
+      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map(dayRow => ({
+        day_of_week: dayRow.day,
+        open_time: dayRow.openTime,
+        close_time: dayRow.closeTime,
+        is_closed: !dayRow.isOpen
+      }));
+
+      // =============== المرحلة 4: Dry Run - التحقق من البيانات قبل إنشاء Auth ===============
+      const { data: dryRunResult, error: dryRunError } = await supabase.rpc(
+        'register_business_with_hours',
+        {
+          p_user_id: "00000000-0000-0000-0000-000000000000", // UUID وهمي للـ Dry Run
+          p_name: formData.restaurantNameEn?.trim() || "",
+          p_name_ar: formData.restaurantName || "",
+          p_phone: formData.phone || "",
+          p_address: formData.address || "",
+          p_logo_url: logoUrl || null,
+          p_cover_url: coverUrl || null,
+          p_created_at: new Date().toISOString(),
+          p_business_type: formData.businessType || "restaurant",
+          p_hours: JSON.stringify(hoursToInsert),
+          p_is_dry_run: true
+        }
+      );
+
+      if (dryRunError || !dryRunResult?.success) {
+        throw new Error(dryRunResult?.message || dryRunError?.message || "فشل التحقق من البيانات.");
+      }
+
+      // =============== المرحلة 5: إنشاء Auth **فقط بعد التأكد من البيانات** ===============
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -204,57 +235,37 @@ export function useSignupForm({ onSuccess } = {}) {
       });
 
       if (signUpError) {
-        await cleanupUploadedLogo(uploadedLogoPath);
-        await cleanupUploadedCover(uploadedCoverPath);
-        if (signUpError.message?.includes("already registered")) {
-          notify(signupMessages.emailExists, "error");
-        } else {
-          notify(signUpError.message || "فشل إنشاء الحساب، يرجى المحاولة لاحقاً.", "error");
+        throw new Error(signUpError.message || "فشل إنشاء الحساب");
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        throw new Error("لم يتم الحصول على معرف المستخدم.");
+      }
+
+      // =============== المرحلة 6: الإدراج الفعلي للبيانات ===============
+      const { data: insertResult, error: insertError } = await supabase.rpc(
+        'register_business_with_hours',
+        {
+          p_user_id: userId,
+          p_name: formData.restaurantNameEn?.trim() || "",
+          p_name_ar: formData.restaurantName || "",
+          p_phone: formData.phone || "",
+          p_address: formData.address || "",
+          p_logo_url: logoUrl || null,
+          p_cover_url: coverUrl || null,
+          p_created_at: new Date().toISOString(),
+          p_business_type: formData.businessType || "restaurant",
+          p_hours: JSON.stringify(hoursToInsert),
+          p_is_dry_run: false
         }
-        return;
+      );
+
+      if (insertError || !insertResult?.success) {
+        throw new Error(insertResult?.message || insertError?.message || "فشل إدراج بيانات المطعم.");
       }
 
-      // 💡 هنا نمسك الـ ID المخفي للعميل من الحساب الجديد فوراً
-      const userId = data.user.id;
-
-      // 2. الخطوة الثانية: إرسال معلومات المطعم لجدول الـ businesses وربطها بالـ ID المخفي
-      const { error: businessError } = await supabase
-        .from('businesses') 
-        .insert({
-          id: userId, // الـ id المخفي يوضع هنا لربط جدول المطاعم بالحساب الشخصي
-          name_ar: formData.restaurantName || "",
-          name:formData.restaurantNameEn?.trim() || "",
-          type: formData.businessType || "restaurant",
-          phone: formData.phone || "",
-          address: formData.address || "",
-          logo_url: logoUrl,
-          cover_url: coverUrl,
-          is_active: false
-        });
-
-      if (businessError) {
-        throw new Error(businessError.message || "فشل حفظ بيانات المطعم.");
-      }
-
-      // 3. الخطوة الثالثة: تحضير مصفوفة الأيام وربط كل سطر بالـ ID المخفي للعميل
-      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map(dayRow => ({
-        user_id: userId,          // عمود الربط الذي أنشأناه بالـ Supabase
-        day_of_week: dayRow.day,  // يرسل رقم اليوم (0-6) لعمود day_of_week
-        open_time: dayRow.openTime,
-        close_time: dayRow.closeTime,
-        is_closed: !dayRow.isOpen // إذا كان isOpen يساوي true فإن is_closed يكون false والعكس صحيح
-      }));
-
-      // 4. الخطوة الرابعة: إرسال الأيام الـ 7 دفعة واحدة لجدول ساعات العمل
-      const { error: hoursError } = await supabase
-        .from('restaurant_hours') 
-        .insert(hoursToInsert);
-
-      if (hoursError) {
-        throw new Error(hoursError.message || "فشل حفظ ساعات العمل الأسبوعية.");
-      }
-
-      // نجاح العملية بالكامل وتخزينها بالجداول المنفصلة
+      // =============== نجاح العملية بالكامل ===============
       notify(signupMessages.success, "success");
 
       if (typeof onSuccess === "function") {
@@ -263,6 +274,10 @@ export function useSignupForm({ onSuccess } = {}) {
     } catch (err) {
       await cleanupUploadedLogo(uploadedLogoPath);
       await cleanupUploadedCover(uploadedCoverPath);
+
+      // ملاحظة: Auth ينشأ فقط بعد التحقق من البيانات بـ Dry Run
+      // إذا فشل الـ Dry Run، لا يوجد Auth ليتم حذفه
+      // إذا فشل الإدراج الفعلي بعد Auth، حاول حذف البيانات (لكن Auth سيبقى)
 
       if (err instanceof Error && err.message) {
         notify(err.message, "error");
