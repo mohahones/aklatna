@@ -98,7 +98,20 @@ export function useLoginForm({ onSuccess } = {}) {
         return;
       }
 
-      navigate("/dashboard", { replace: true });
+      // ✅ قراءة حالة is_active من جدول businesses
+      const { data: businessData } = await supabase
+        .from("businesses")
+        .select("is_active")
+        .eq("id", data.user?.id)
+        .single();
+
+      // إذا كانت is_active = false → توجيه إلى صفحة الانتظار
+      // إذا كانت is_active = true → توجيه إلى الداشبورد
+      if (businessData?.is_active === false) {
+        navigate("/waiting", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
       return;
     } catch {
       setStatus("error");

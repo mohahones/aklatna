@@ -18,9 +18,12 @@ const signupMessages = {
 
 export function useSignupForm({ onSuccess } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
   const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [errorType, setErrorType] = useState(""); // نوع الخطأ المحدد
+  const [errorStep, setErrorStep] = useState(""); // الخطوة التي حدث فيها الخطأ
+  const [errorDetails, setErrorDetails] = useState(null); // تفاصيل إضافية للخطأ
 
   function notify(nextMessage, nextStatus = "info") {
     setMessage(nextMessage);
@@ -30,6 +33,23 @@ export function useSignupForm({ onSuccess } = {}) {
       setMessage("");
       setStatus("idle");
     }, 2600);
+  }
+
+  function notifyError(errorMsg, type = "general", step = "", details = null) {
+    setMessage(errorMsg);
+    setStatus("error");
+    setErrorType(type);
+    setErrorStep(step);
+    setErrorDetails(details);
+    console.error(`❌ خطأ [${type}] في الخطوة: ${step}`, { errorMsg, details });
+    window.clearTimeout(notify.timeoutId);
+    notify.timeoutId = window.setTimeout(() => {
+      setMessage("");
+      setStatus("idle");
+      setErrorType("");
+      setErrorStep("");
+      setErrorDetails(null);
+    }, 3500);
   }
 
   function normalizeOpeningHours(openingHours = []) {
@@ -137,12 +157,12 @@ export function useSignupForm({ onSuccess } = {}) {
 
     if (Object.keys(nextFieldErrors).length > 0) {
       setFieldErrors(nextFieldErrors);
-      notify(signupMessages.fixMissingFields, "error");
+      notifyError(signupMessages.fixMissingFields, "validation_error", "التحقق من البيانات", nextFieldErrors);
       return;
     }
 
     if (!isSupabaseConfigured || !supabase) {
-      notify(signupMessages.authUnavailable, "error");
+      notifyError(signupMessages.authUnavailable, "supabase_unavailable", "تهيئة النظام");
       return;
     }
 
@@ -168,7 +188,12 @@ export function useSignupForm({ onSuccess } = {}) {
         });
 
         if (uploadError) {
-          throw new Error(uploadError.message || "فشل رفع شعار المطعم إلى التخزين.");
+          throw {
+            type: "logo_upload_failed",
+            step: "رفع الشعار",
+            message: `فشل رفع شعار المطعم: ${uploadError.message}`,
+            details: uploadError
+          };
         }
 
         const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedLogoPath);
@@ -185,7 +210,12 @@ export function useSignupForm({ onSuccess } = {}) {
         });
 
         if (uploadError) {
-          throw new Error(uploadError.message || "فشل رفع صورة الغلاف إلى التخزين.");
+          throw {
+            type: "cover_upload_failed",
+            step: "رفع صورة الغلاف",
+            message: `فشل رفع صورة الغلاف: ${uploadError.message}`,
+            details: uploadError
+          };
         }
 
         const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedCoverPath);
@@ -201,10 +231,10 @@ export function useSignupForm({ onSuccess } = {}) {
       }));
 
       // =============== المرحلة 4: Dry Run - التحقق من البيانات قبل إنشاء Auth ===============
-      const { data: dryRunResult, error: dryRunError } = await supabase.rpc(
+      const { error: dryRunError } = await supabase.rpc(
         'register_business_with_hours',
         {
-          p_user_id: "00000000-0000-0000-0000-000000000000", // UUID وهمي للـ Dry Run
+          p_user_id: "00000000-0000-0000-0000-000000000000",
           p_name: formData.restaurantNameEn?.trim() || "",
           p_name_ar: formData.restaurantName || "",
           p_phone: formData.phone || "",
@@ -213,14 +243,21 @@ export function useSignupForm({ onSuccess } = {}) {
           p_cover_url: coverUrl || null,
           p_created_at: new Date().toISOString(),
           p_business_type: formData.businessType || "restaurant",
-          p_hours: JSON.stringify(hoursToInsert),
+          p_hours: hoursToInsert,
           p_is_dry_run: true
         }
       );
 
-      if (dryRunError || !dryRunResult?.success) {
-        throw new Error(dryRunResult?.message || dryRunError?.message || "فشل التحقق من البيانات.");
+      if (dryRunError) {
+        throw {
+          type: "dry_run_validation_failed",
+          step: "التحقق من صحة البيانات",
+          message: `فشل التحقق من البيانات: ${dryRunError.message}`,
+          details: dryRunError
+        };
       }
+
+      // ✅ الدالة RETURNS VOID — إذا لا error = نجح التحقق
 
       // =============== المرحلة 5: إنشاء Auth **فقط بعد التأكد من البيانات** ===============
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -235,16 +272,30 @@ export function useSignupForm({ onSuccess } = {}) {
       });
 
       if (signUpError) {
-        throw new Error(signUpError.message || "فشل إنشاء الحساب");
+        let authErrorMsg = signUpError.message || "فشل إنشاء الحساب";
+        if (signUpError.message?.includes("already registered")) {
+          authErrorMsg = "هذا البريد الإلكتروني مسجل بالفعل في النظام";
+        }
+        throw {
+          type: "auth_signup_failed",
+          step: "إنشاء حساب المستخدم",
+          message: authErrorMsg,
+          details: signUpError
+        };
       }
 
       const userId = data.user?.id;
       if (!userId) {
-        throw new Error("لم يتم الحصول على معرف المستخدم.");
+        throw {
+          type: "auth_no_user_id",
+          step: "إنشاء حساب المستخدم",
+          message: "لم يتم الحصول على معرف المستخدم من النظام",
+          details: { user: data.user }
+        };
       }
 
       // =============== المرحلة 6: الإدراج الفعلي للبيانات ===============
-      const { data: insertResult, error: insertError } = await supabase.rpc(
+      const { error: insertError } = await supabase.rpc(
         'register_business_with_hours',
         {
           p_user_id: userId,
@@ -256,14 +307,21 @@ export function useSignupForm({ onSuccess } = {}) {
           p_cover_url: coverUrl || null,
           p_created_at: new Date().toISOString(),
           p_business_type: formData.businessType || "restaurant",
-          p_hours: JSON.stringify(hoursToInsert),
+          p_hours: hoursToInsert,
           p_is_dry_run: false
         }
       );
 
-      if (insertError || !insertResult?.success) {
-        throw new Error(insertResult?.message || insertError?.message || "فشل إدراج بيانات المطعم.");
+      if (insertError) {
+        throw {
+          type: "database_insert_failed",
+          step: "حفظ البيانات في قاعدة البيانات",
+          message: `فشل حفظ البيانات: ${insertError.message}`,
+          details: insertError
+        };
       }
+
+      // ✅ الدالة RETURNS VOID — إذا لا error = نجح الإدراج
 
       // =============== نجاح العملية بالكامل ===============
       notify(signupMessages.success, "success");
@@ -275,14 +333,13 @@ export function useSignupForm({ onSuccess } = {}) {
       await cleanupUploadedLogo(uploadedLogoPath);
       await cleanupUploadedCover(uploadedCoverPath);
 
-      // ملاحظة: Auth ينشأ فقط بعد التحقق من البيانات بـ Dry Run
-      // إذا فشل الـ Dry Run، لا يوجد Auth ليتم حذفه
-      // إذا فشل الإدراج الفعلي بعد Auth، حاول حذف البيانات (لكن Auth سيبقى)
-
-      if (err instanceof Error && err.message) {
-        notify(err.message, "error");
+      // معالجة الأخطاء المحددة
+      if (err.type && err.step) {
+        notifyError(err.message, err.type, err.step, err.details);
+      } else if (err instanceof Error && err.message) {
+        notifyError(err.message, "unknown_error", "عملية غير معروفة");
       } else {
-        notify("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.", "error");
+        notifyError("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.", "unexpected_error", "نظام");
       }
     } finally {
       setIsSubmitting(false);
@@ -294,6 +351,9 @@ export function useSignupForm({ onSuccess } = {}) {
     status,
     message,
     fieldErrors,
+    errorType,
+    errorStep,
+    errorDetails,
     handleSignup,
   };
 }

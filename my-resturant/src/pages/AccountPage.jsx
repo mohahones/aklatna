@@ -7,16 +7,15 @@ export default function AccountPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const signupData = location.state?.signupData;
-    const { isSubmitting, status, message, handleSignup } = useSignupForm({
+
+    const { isSubmitting, status, message, errorType, errorStep, handleSignup } = useSignupForm({
         onSuccess: () => {
             setIsSubmitted(true);
             window.sessionStorage.removeItem("auth-signup-current-step");
             window.sessionStorage.removeItem("auth-signup-step1-form");
             window.sessionStorage.removeItem("auth-signup-step1-confirmed");
             window.sessionStorage.removeItem("auth-signup-step2-hours");
-            setTimeout(() => {
-                navigate("/dashboard", { replace: true });
-            }, 2000);
+            // ✅ لا توجيه فوري — سيتم التوجيه عند الضغط على "العودة للرئيسية"
         },
     });
     const [submitMessage, setSubmitMessage] = useState("");
@@ -115,9 +114,15 @@ export default function AccountPage() {
                         </button>
 
                         {submitMessage || message ? (
-                            <p className={`mt-3 text-sm font-medium ${isSubmitted || status === "success" ? "text-success-green" : "text-error-red"}`}>
-                                {submitMessage || message}
-                            </p>
+                            <div className={`mt-4 rounded-lg p-3 text-sm font-medium ${isSubmitted || status === "success" ? "bg-success-green/10 text-success-green" : "bg-error-red/10 text-error-red"}`}>
+                                <p className="font-bold mb-1">{message}</p>
+                                {errorStep && (
+                                    <p className="text-xs opacity-80">الخطوة: {errorStep}</p>
+                                )}
+                                {errorType && (
+                                    <p className="text-xs opacity-80">نوع الخطأ: {errorType}</p>
+                                )}
+                            </div>
                         ) : null}
 
                         <div
@@ -132,7 +137,7 @@ export default function AccountPage() {
                             </p>
                             <button
                                 type="button"
-                                onClick={() => setIsSubmitted(false)}
+                                onClick={() => navigate("/waiting", { replace: true })}
                                 className="w-full rounded-xl border-2 border-primary px-4 py-3 font-bold text-primary transition-colors hover:bg-primary/5"
                             >
                                 العودة للرئيسية
