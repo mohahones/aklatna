@@ -15,10 +15,15 @@ function createDefaultHours() {
 
 export default function SignupFormStep2({ onSubmit, onBack, isLoading = false }) {
   const fileInputRef = useRef(null);
+  const fileInputRefCover = useRef(null);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState("");
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isDragActiveCover, setIsDragActiveCover] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [coverError, setCoverError] = useState("");
   const [openingHours, setOpeningHours] = useSessionStorageState("auth-signup-step2-hours", createDefaultHours);
 
   useEffect(() => {
@@ -26,8 +31,11 @@ export default function SignupFormStep2({ onSubmit, onBack, isLoading = false })
       if (logoPreview) {
         URL.revokeObjectURL(logoPreview);
       }
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
     };
-  }, [logoPreview]);
+  }, [logoPreview, coverPreview]);
 
   function handleFile(file) {
     if (!file) {
@@ -49,8 +57,32 @@ export default function SignupFormStep2({ onSubmit, onBack, isLoading = false })
     setLogoPreview(URL.createObjectURL(file));
   }
 
+  function handleCoverFile(file) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setCoverError("يرجى اختيار صورة صالحة");
+      return;
+    }
+
+    setCoverError("");
+    setCoverFile(file);
+
+    if (coverPreview) {
+      URL.revokeObjectURL(coverPreview);
+    }
+
+    setCoverPreview(URL.createObjectURL(file));
+  }
+
   function handleFileChange(event) {
     handleFile(event.target.files?.[0]);
+  }
+
+  function handleCoverFileChange(event) {
+    handleCoverFile(event.target.files?.[0]);
   }
 
   function handleDragOver(event) {
@@ -67,6 +99,22 @@ export default function SignupFormStep2({ onSubmit, onBack, isLoading = false })
     event.preventDefault();
     setIsDragActive(false);
     handleFile(event.dataTransfer.files?.[0]);
+  }
+
+  function handleCoverDragOver(event) {
+    event.preventDefault();
+    setIsDragActiveCover(true);
+  }
+
+  function handleCoverDragLeave(event) {
+    event.preventDefault();
+    setIsDragActiveCover(false);
+  }
+
+  function handleCoverDrop(event) {
+    event.preventDefault();
+    setIsDragActiveCover(false);
+    handleCoverFile(event.dataTransfer.files?.[0]);
   }
 
   function updateDay(index, key, value) {
@@ -88,6 +136,7 @@ export default function SignupFormStep2({ onSubmit, onBack, isLoading = false })
     if (typeof onSubmit === "function") {
       onSubmit({
         logoFile,
+        coverFile,
         openingHours,
       });
     }
@@ -130,6 +179,44 @@ export default function SignupFormStep2({ onSubmit, onBack, isLoading = false })
         </div>
 
         {localError && <p className="font-label-sm text-label-sm text-error">{localError}</p>}
+      </div>
+
+      {/* Cover Image */}
+      <div className="space-y-4">
+        <label className="font-headline-md text-headline-md block">
+          صورة الغلاف <span className="text-secondary font-normal">(اختياري)</span>
+        </label>
+
+        <div
+          id="drop-zone-cover"
+          className={`border-2 border-dashed rounded-xl p-8 transition-all duration-300 flex flex-col items-center justify-center gap-4 bg-surface-container-lowest cursor-pointer ${
+            isDragActiveCover ? "border-primary bg-primary-fixed" : "border-outline-variant hover:border-primary"
+          }`}
+          onClick={() => fileInputRefCover.current?.click()}
+          onDragEnter={handleCoverDragOver}
+          onDragOver={handleCoverDragOver}
+          onDragLeave={handleCoverDragLeave}
+          onDrop={handleCoverDrop}
+        >
+          <input ref={fileInputRefCover} accept="image/*" className="hidden" id="cover-upload" type="file" onChange={handleCoverFileChange} />
+
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center overflow-hidden ${coverPreview ? "bg-success-green/20" : "bg-primary-fixed text-primary"}`}>
+            {coverPreview ? (
+              <img alt="صورة الغلاف" className="w-full h-full object-cover" src={coverPreview} />
+            ) : (
+              <MaterialIcon name="image" className="text-[32px]" />
+            )}
+          </div>
+
+          <div className="text-center">
+            <p className="font-body-lg text-body-lg font-semibold">
+              {coverFile ? `الملف المختار: ${coverFile.name}` : "انقر للتحميل أو قم بالسحب والإفلات"}
+            </p>
+            <p className="font-label-sm text-label-sm text-secondary">SVG, PNG, JPG (بحد أقصى 1200x600 بكسل)</p>
+          </div>
+        </div>
+
+        {coverError && <p className="font-label-sm text-label-sm text-error">{coverError}</p>}
       </div>
 
       <div className="space-y-6">

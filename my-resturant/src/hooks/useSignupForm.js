@@ -56,12 +56,35 @@ export function useSignupForm({ onSuccess } = {}) {
     return `logos/${suffix}.${extension}`;
   }
 
+  function buildCoverPath(file) {
+    const extension = file.type?.split("/")[1] || "jpg";
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `covers/${suffix}.${extension}`;
+  }
+
+  async function compressCover(file) {
+    return imageCompression(file, {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      initialQuality: 0.8,
+    });
+  }
+
   async function cleanupUploadedLogo(uploadedLogoPath) {
     if (!uploadedLogoPath) {
       return;
     }
 
     await supabase.storage.from(logoBucketName).remove([uploadedLogoPath]);
+  }
+
+  async function cleanupUploadedCover(uploadedCoverPath) {
+    if (!uploadedCoverPath) {
+      return;
+    }
+
+    await supabase.storage.from(logoBucketName).remove([uploadedCoverPath]);
   }
 
   async function handleSignup(formData) {
@@ -82,8 +105,22 @@ export function useSignupForm({ onSuccess } = {}) {
       nextFieldErrors.password = signupMessages.passwordTooShort;
     }
 
+    if (!formData.passwordConfirm?.trim()) {
+      nextFieldErrors.passwordConfirm = "تأكيد كلمة المرور مطلوب";
+    } else if (formData.passwordConfirm !== formData.password) {
+      nextFieldErrors.passwordConfirm = "كلمات المرور غير متطابقة";
+    }
+
     if (!formData.restaurantName?.trim()) {
       nextFieldErrors.restaurantName = "اسم المطعم مطلوب";
+    }
+
+    if (!formData.restaurantNameEn?.trim()) {
+      nextFieldErrors.restaurantNameEn = "اسم المطعم بالإنجليزية مطلوب";
+    }
+
+    if (!formData.businessType?.trim()) {
+      nextFieldErrors.businessType = "نوع المشروع مطلوب";
     }
 
     if (!formData.phone?.trim()) {
@@ -116,6 +153,8 @@ export function useSignupForm({ onSuccess } = {}) {
 
     let uploadedLogoPath = "";
     let logoUrl = "";
+    let uploadedCoverPath = "";
+    let coverUrl = "";
 
    try {
       if (formData.logoFile instanceof File) {
@@ -135,6 +174,23 @@ export function useSignupForm({ onSuccess } = {}) {
         logoUrl = publicData.publicUrl;
       }
 
+      if (formData.coverFile instanceof File) {
+        const compressedCover = await compressCover(formData.coverFile);
+        uploadedCoverPath = buildCoverPath(compressedCover);
+
+        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedCoverPath, compressedCover, {
+          contentType: compressedCover.type || formData.coverFile.type,
+          upsert: false,
+        });
+
+        if (uploadError) {
+          throw new Error(uploadError.message || "فشل رفع صورة الغلاف إلى التخزين.");
+        }
+
+        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedCoverPath);
+        coverUrl = publicData.publicUrl;
+      }
+
       // 1. الخطوة الأولى: إنشاء الحساب الأساسي بالإيميل والباسورد فقط (حذفنا كائن options)
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
@@ -149,6 +205,7 @@ export function useSignupForm({ onSuccess } = {}) {
 
       if (signUpError) {
         await cleanupUploadedLogo(uploadedLogoPath);
+        await cleanupUploadedCover(uploadedCoverPath);
         if (signUpError.message?.includes("already registered")) {
           notify(signupMessages.emailExists, "error");
         } else {
@@ -167,9 +224,11 @@ export function useSignupForm({ onSuccess } = {}) {
           id: userId, // الـ id المخفي يوضع هنا لربط جدول المطاعم بالحساب الشخصي
           name_ar: formData.restaurantName || "",
           name:formData.restaurantNameEn?.trim() || "",
+          type: formData.businessType || "restaurant",
           phone: formData.phone || "",
           address: formData.address || "",
           logo_url: logoUrl,
+          cover_url: coverUrl,
           is_active: false
         });
 
@@ -203,6 +262,7 @@ export function useSignupForm({ onSuccess } = {}) {
       }
     } catch (err) {
       await cleanupUploadedLogo(uploadedLogoPath);
+      await cleanupUploadedCover(uploadedCoverPath);
 
       if (err instanceof Error && err.message) {
         notify(err.message, "error");

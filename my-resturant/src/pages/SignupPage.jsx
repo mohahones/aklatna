@@ -25,6 +25,14 @@ export default function SignupPage() {
       nextErrors.restaurantName = "اسم المطعم مطلوب";
     }
 
+    if (!formData.restaurantNameEn?.trim()) {
+      nextErrors.restaurantNameEn = "اسم المطعم بالإنجليزية مطلوب";
+    }
+
+    if (!formData.businessType?.trim()) {
+      nextErrors.businessType = "نوع المشروع مطلوب";
+    }
+
     if (!formData.phone?.trim()) {
       nextErrors.phone = "رقم الهاتف مطلوب";
     }
@@ -43,6 +51,12 @@ export default function SignupPage() {
       nextErrors.password = "كلمة المرور مطلوبة";
     } else if (formData.password.length < 6) {
       nextErrors.password = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+    }
+
+    if (!formData.passwordConfirm?.trim()) {
+      nextErrors.passwordConfirm = "تأكيد كلمة المرور مطلوب";
+    } else if (formData.passwordConfirm !== formData.password) {
+      nextErrors.passwordConfirm = "كلمات المرور غير متطابقة";
     }
 
     if (Object.keys(nextErrors).length > 0) {
