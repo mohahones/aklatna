@@ -76,16 +76,25 @@ export function useCashPayment() {
   async function handleReject(id) {
     if (!isSupabaseConfigured || !supabase) return;
 
-    const { error } = await supabase
-      .from("businesses")
-      .delete()
-      .eq("id", id);
+    try {
+      // Call the admin RPC that deletes the auth user and cascades deletions.
+      const { error } = await supabase.rpc("admin_reject_and_delete_business", {
+        p_business_id: id,
+      });
 
-    if (!error) {
+      if (error) {
+        console.error("admin_reject_and_delete_business error:", error);
+        return error;
+      }
+
+      // Remove from local state
       setRequests((current) => current.filter((request) => request.id !== id));
-    }
 
-    return error;
+      return null;
+    } catch (err) {
+      console.error("Error calling admin_reject_and_delete_business:", err);
+      return err;
+    }
   }
 
   return {

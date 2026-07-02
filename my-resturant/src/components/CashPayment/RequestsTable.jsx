@@ -1,7 +1,33 @@
+import { useState } from "react";
 import MaterialIcon from "../ui/MaterialIcon";
 import { STATUS_META } from "../../utils/cashPaymentUtils";
 
 export function RequestsTable({ filteredRequests, onApprove, onReject }) {
+  const [confirm, setConfirm] = useState({ open: false, id: null, action: null });
+
+  function openConfirm(id, action) {
+    setConfirm({ open: true, id, action });
+  }
+
+  async function handleConfirm() {
+    if (!confirm.id || !confirm.action) return;
+    const { id, action } = confirm;
+    setConfirm((c) => ({ ...c, processing: true }));
+    try {
+      if (action === "approve") {
+        await onApprove(id);
+      } else if (action === "reject") {
+        await onReject(id);
+      }
+    } finally {
+      setConfirm({ open: false, id: null, action: null });
+    }
+  }
+
+  function closeConfirm() {
+    setConfirm({ open: false, id: null, action: null });
+  }
+
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle bg-surface-container-low/30 px-4 py-4">
@@ -62,20 +88,22 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
                   <td className="px-4 py-4 sm:px-5">
                     {request.status === "pending" ? (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onApprove(request.id)}
-                          className="rounded-lg bg-success-green px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
-                        >
-                          موافقة
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onReject(request.id)}
-                          className="rounded-lg border border-error-red px-3 py-1.5 text-xs font-bold text-error-red transition hover:bg-error-red/5"
-                        >
-                          رفض
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openConfirm(request.id, "approve")}
+                            className="rounded-lg bg-success-green px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                          >
+                            موافقة
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openConfirm(request.id, "reject")}
+                            className="rounded-lg border border-error-red px-3 py-1.5 text-xs font-bold text-error-red transition hover:bg-error-red/5"
+                          >
+                            رفض
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <button
@@ -93,6 +121,35 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
           </tbody>
         </table>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirm.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeConfirm} />
+          <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <h3 className="mb-3 text-lg font-semibold">تأكيد الإجراء</h3>
+            <p className="mb-4 text-sm text-on-surface-variant">
+              هل أنت متأكد أنك تريد {confirm.action === "approve" ? "قبول" : "رفض"} هذا الطلب؟
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeConfirm}
+                className="rounded-lg px-4 py-2 text-sm font-medium bg-surface-container-high"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className={`rounded-lg px-4 py-2 text-sm font-medium ${confirm.action === "approve" ? "bg-success-green text-white" : "bg-error-red text-white"}`}
+              >
+                {confirm.action === "approve" ? "نعم، قبول" : "نعم، رفض"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
