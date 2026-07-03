@@ -2,7 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { useEffect, useState } from "react";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import DashboardPage from "./pages/DashboardPage";
+import Dashboard from "./pages/Dashboard";
+import OverviewPage from "./pages/OverviewPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import AccountPage from "./pages/AccountPage";
 import CashPaymentPage from "./pages/CashPaymentPage";
@@ -182,11 +183,14 @@ export default function App() {
             isAdminUser(currentUser) ? 
               <Navigate to="/cash-payment" replace /> : 
               subscriptionExpired ? <Navigate to="/renew-subscription" replace /> : 
-              userIsActive === false ? <Navigate to="/waiting" replace /> : <DashboardPage currentUser={currentUser} onLogout={handleLogout} />
+              userIsActive === false ? <Navigate to="/waiting" replace /> : <Dashboard currentUser={currentUser} onLogout={handleLogout} />
           ) : (
             <Navigate to="/login" replace />
           )}
-        />
+        >
+          <Route index element={<OverviewPage />} />
+          <Route path="overview" element={<OverviewPage />} />
+        </Route>
         <Route path="/account" element={<AccountRouteWrapper currentUser={currentUser} />} />
         <Route
           path="/waiting"
