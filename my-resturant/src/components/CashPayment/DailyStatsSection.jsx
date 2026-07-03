@@ -13,35 +13,35 @@ export function DailyStatsSection({ dailyStats }) {
   return (
     <section className="rounded-2xl border border-border-subtle bg-white/80 p-6 shadow-sm backdrop-blur">
       <h2 className="mb-6 text-lg font-semibold text-on-surface">التحصيل اليومي</h2>
-      <div className="space-y-3">
-        {dailyStats.map((stat) => (
-          <div key={stat.date} className="rounded-lg border border-border-subtle bg-surface-container p-4 hover:shadow-sm transition">
-            <p className="mb-3 text-sm font-medium text-on-surface-variant">{stat.date}</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex items-center gap-2 rounded-lg bg-success-green/10 p-3">
-                <MaterialIcon name="check_circle" className="text-lg text-success-green" filled />
-                <div>
-                  <p className="text-xs text-on-surface-variant">مقبول</p>
-                  <p className="font-bold text-success-green">{stat.accepted}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-red-600/10 p-3">
-                <MaterialIcon name="cancel" className="text-lg text-red-600" filled />
-                <div>
-                  <p className="text-xs text-on-surface-variant">مرفوض</p>
-                  <p className="font-bold text-red-600">{stat.rejected}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-blue-600/10 p-3">
-                <MaterialIcon name="payments" className="text-lg text-blue-600" filled />
-                <div>
-                  <p className="text-xs text-on-surface-variant">المحصل</p>
-                  <p className="font-bold text-blue-600">${stat.collected.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="overflow-x-auto rounded-3xl border border-border-subtle bg-white/90">
+        <table className="min-w-full border-collapse text-right text-sm">
+          <thead className="bg-surface-container text-on-surface-variant">
+            <tr>
+              <th className="border-b border-border-subtle px-4 py-4 font-semibold">التاريخ</th>
+              <th className="border-b border-border-subtle px-4 py-4 font-semibold">مقبول</th>
+              <th className="border-b border-border-subtle px-4 py-4 font-semibold">مرفوض</th>
+              <th className="border-b border-border-subtle px-4 py-4 font-semibold">المحصل</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dailyStats.map((stat, index) => (
+              <tr key={stat.date} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
+                <td className="border-b border-border-subtle px-4 py-4 align-top">
+                  <p className="font-semibold text-on-surface">{stat.date}</p>
+                </td>
+                <td className="border-b border-border-subtle px-4 py-4 align-top">
+                  <p className="font-semibold text-success-green">{stat.accepted}</p>
+                </td>
+                <td className="border-b border-border-subtle px-4 py-4 align-top">
+                  <p className="font-semibold text-error-red">{stat.rejected}</p>
+                </td>
+                <td className="border-b border-border-subtle px-4 py-4 align-top">
+                  <p className="font-semibold text-blue-600">${stat.collected.toFixed(2)}</p>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );

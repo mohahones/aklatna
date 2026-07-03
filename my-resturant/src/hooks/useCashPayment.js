@@ -37,10 +37,38 @@ export function useCashPayment() {
         .channel("businesses-realtime")
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "businesses" },
+          { event: "*", schema: "public", table: "businesses" },
           (payload) => {
             if (!isMounted) return;
-            setRequests((current) => [mapBusinessRowToRequest(payload.new), ...current]);
+            const eventType = payload.event || payload.eventType;
+
+            if (eventType === "INSERT") {
+              setRequests((current) => {
+                const newRequest = mapBusinessRowToRequest(payload.new);
+                return [newRequest, ...current.filter((request) => request.id !== newRequest.id)];
+              });
+              return;
+            }
+
+            if (eventType === "UPDATE") {
+              setRequests((current) => {
+                const updatedRequest = mapBusinessRowToRequest(payload.new);
+                const exists = current.some((request) => request.id === updatedRequest.id);
+                if (exists) {
+                  return current.map((request) =>
+                    request.id === updatedRequest.id ? updatedRequest : request
+                  );
+                }
+                return [updatedRequest, ...current];
+              });
+              return;
+            }
+
+            if (eventType === "DELETE") {
+              setRequests((current) =>
+                current.filter((request) => request.id !== (payload.old?.id || payload.old?.business_id))
+              );
+            }
           }
         )
         .subscribe();
@@ -57,15 +85,40 @@ export function useCashPayment() {
   async function handleApprove(id) {
     if (!isSupabaseConfigured || !supabase) return;
 
+    const now = new Date();
+    const newExpiresAt = new Date(now);
+    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+
     const { error } = await supabase
       .from("businesses")
-      .update({ is_active: true })
+      .update({
+        is_active: true,
+        created_at: now.toISOString(),
+        expires_at: newExpiresAt.toISOString(),
+      })
       .eq("id", id);
 
     if (!error) {
       setRequests((current) =>
         current.map((request) =>
-          request.id === id ? { ...request, status: "accepted", is_active: true } : request
+          request.id === id
+            ? {
+                ...request,
+                status: "accepted",
+                is_active: true,
+                createdAt: now.toISOString(),
+                created_at: now.toISOString(),
+                date: new Date(now).toLocaleDateString("ar-SA", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }),
+                time: new Date(now).toLocaleTimeString("ar-SA", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }
+            : request
         )
       );
     }

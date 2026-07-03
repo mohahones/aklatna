@@ -5,8 +5,8 @@ import { STATUS_META } from "../../utils/cashPaymentUtils";
 export function RequestsTable({ filteredRequests, onApprove, onReject }) {
   const [confirm, setConfirm] = useState({ open: false, id: null, action: null });
 
-  function openConfirm(id, action) {
-    setConfirm({ open: true, id, action });
+  function openConfirm(id, action, restaurantName) {
+    setConfirm({ open: true, id, action, restaurantName });
   }
 
   async function handleConfirm() {
@@ -91,14 +91,14 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => openConfirm(request.id, "approve")}
+                            onClick={() => openConfirm(request.id, "approve", request.restaurantName)}
                             className="rounded-lg bg-success-green px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
                           >
                             موافقة
                           </button>
                           <button
                             type="button"
-                            onClick={() => openConfirm(request.id, "reject")}
+                            onClick={() => openConfirm(request.id, "reject", request.restaurantName)}
                             className="rounded-lg border border-error-red px-3 py-1.5 text-xs font-bold text-error-red transition hover:bg-error-red/5"
                           >
                             رفض
@@ -124,25 +124,40 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
 
       {/* Confirmation Modal */}
       {confirm.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={closeConfirm} />
-          <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-3 text-lg font-semibold">تأكيد الإجراء</h3>
-            <p className="mb-4 text-sm text-on-surface-variant">
-              هل أنت متأكد أنك تريد {confirm.action === "approve" ? "قبول" : "رفض"} هذا الطلب؟
-            </p>
-            <div className="flex justify-end gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300" onClick={closeConfirm} />
+          <div className="relative z-10 w-full max-w-md rounded-[26px] border border-white/10 bg-white/95 p-6 shadow-[0_28px_120px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl transition-transform duration-300 ease-out transform opacity-100 scale-100">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${confirm.action === "approve" ? "bg-success-green/10 text-success-green" : "bg-error-red/10 text-error-red"}`}>
+                {confirm.action === "approve" ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-on-surface">تأكيد الإجراء</h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  هل أنت متأكد أنك تريد {confirm.action === "approve" ? "قبول" : "رفض"} طلب مطعم {confirm.restaurantName || "هذا"}؟
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeConfirm}
-                className="rounded-lg px-4 py-2 text-sm font-medium bg-surface-container-high"
+                className="rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
-                className={`rounded-lg px-4 py-2 text-sm font-medium ${confirm.action === "approve" ? "bg-success-green text-white" : "bg-error-red text-white"}`}
+                className={`rounded-2xl px-4 py-2 text-sm font-semibold text-white transition ${confirm.action === "approve" ? "bg-success-green hover:bg-success-green/90" : "bg-error-red hover:bg-error-red/90"}`}
               >
                 {confirm.action === "approve" ? "نعم، قبول" : "نعم، رفض"}
               </button>

@@ -7,6 +7,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import AccountPage from "./pages/AccountPage";
 import CashPaymentPage from "./pages/CashPaymentPage";
 import WaitingPage from "./pages/WaitingPage";
+import SubscriptionsPage from "./pages/SubscriptionsPage";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 export default function App() {
@@ -30,13 +31,17 @@ export default function App() {
         setCurrentUser(user);
         
         // ✅ إذا كان هناك مستخدم، اقرأ is_active
-        if (user && user.user_metadata?.role !== "admin") {
-          const { data: businessData } = await supabase
-            .from("businesses")
-            .select("is_active")
-            .eq("id", user.id)
-            .single();
-          setUserIsActive(businessData?.is_active ?? false);
+        if (user) {
+          if (user.user_metadata?.role === "admin") {
+            setUserIsActive(true); // Admin users are always active
+          } else {
+            const { data: businessData } = await supabase
+              .from("businesses")
+              .select("is_active")
+              .eq("id", user.id)
+              .single();
+            setUserIsActive(businessData?.is_active ?? false);
+          }
         }
         
         setIsAuthReady(true);
@@ -56,15 +61,19 @@ export default function App() {
       setCurrentUser(user);
       
       // ✅ إذا كان هناك مستخدم، اقرأ is_active
-      if (user && user.user_metadata?.role !== "admin") {
-        supabase
-          .from("businesses")
-          .select("is_active")
-          .eq("id", user.id)
-          .single()
-          .then(({ data: businessData }) => {
-            setUserIsActive(businessData?.is_active ?? false);
-          });
+      if (user) {
+        if (user.user_metadata?.role === "admin") {
+          setUserIsActive(true); // Admin users are always active
+        } else {
+          supabase
+            .from("businesses")
+            .select("is_active")
+            .eq("id", user.id)
+            .single()
+            .then(({ data: businessData }) => {
+              setUserIsActive(businessData?.is_active ?? false);
+            });
+        }
       }
       
       setIsAuthReady(true);
@@ -151,6 +160,10 @@ export default function App() {
         <Route
           path="/cash-payment"
           element={currentUser ? <CashPaymentPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/subscriptions"
+          element={currentUser && isAdminUser(currentUser) ? <SubscriptionsPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
         />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
