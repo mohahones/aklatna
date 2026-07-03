@@ -57,6 +57,7 @@ export default function SubscriptionsPage({ onLogout }) {
   const [now, setNow] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null, name: "" });
+  const [confirmRenew, setConfirmRenew] = useState({ open: false, requestId: null, businessId: null, name: "", currentExpiresAt: null });
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -237,26 +238,94 @@ export default function SubscriptionsPage({ onLogout }) {
   const expiredCount = expiredSubscribers.length;
 
   // Approve renewal request (call RPC and optimistic update)
-  async function handleApproveRenewal(requestId, businessId) {
+  async function handleApproveRenewal(requestId, businessId, currentExpiresAt = null) {
     if (!isSupabaseConfigured || !supabase) return;
+    if (!requestId || !businessId) return new Error("Missing request or business id");
 
     try {
-      const { error } = await supabase.rpc('renew_business_subscription', {
-        target_business_id: businessId,
-      });
+      let expiresAt = currentExpiresAt;
+      if (!expiresAt) {
+        const { data: business, error: bizErr } = await supabase
+          .from("businesses")
+          .select("expires_at")
+          .eq("id", businessId)
+          .single();
 
-      if (error) {
-        console.error('RPC error:', error);
-        return error;
+        if (bizErr) {
+          console.error("Error fetching business expiry:", bizErr);
+          return bizErr;
+        }
+
+        expiresAt = business?.expires_at || null;
       }
 
-      // optimistic remove
+      const now = new Date();
+      let newExpiresAt;
+      if (expiresAt) {
+        const currentExpires = new Date(expiresAt);
+        if (currentExpires.getTime() > now.getTime()) {
+          newExpiresAt = new Date(currentExpires);
+          newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+        } else {
+          newExpiresAt = new Date(now);
+          newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+        }
+      } else {
+        newExpiresAt = new Date(now);
+        newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+      }
+
+      const { error: updateErr } = await supabase
+        .from("businesses")
+        .update({ is_active: true, expires_at: newExpiresAt.toISOString() })
+        .eq("id", businessId);
+
+      if (updateErr) {
+        console.error("Error updating business expiry:", updateErr);
+        return updateErr;
+      }
+
+      const { error: reqErr } = await supabase
+        .from("subscription_requests")
+        .update({ status: "approved" })
+        .eq("id", requestId);
+
+      if (reqErr) {
+        console.error("Error approving renewal request:", reqErr);
+        return reqErr;
+      }
+
       setSubscriptionRequests((cur) => cur.filter((r) => r.id !== requestId));
       return null;
     } catch (err) {
-      console.error('Exception calling RPC:', err);
+      console.error("Exception approving renewal:", err);
       return err;
     }
+  }
+
+  function openRenewConfirm(request) {
+    setConfirmRenew({
+      open: true,
+      requestId: request.id,
+      businessId: request.businesses?.id || request.business_id || null,
+      name: request.businesses?.name || request.businesses?.name_ar || request.business_name || "الاشتراك",
+      currentExpiresAt: request.businesses?.expires_at || request.expires_at || null,
+    });
+  }
+
+  function closeRenewConfirm() {
+    setConfirmRenew({ open: false, requestId: null, businessId: null, name: "" });
+  }
+
+  async function confirmRenewal() {
+    if (!confirmRenew.requestId || !confirmRenew.businessId) return;
+
+    const error = await handleApproveRenewal(
+      confirmRenew.requestId,
+      confirmRenew.businessId,
+      confirmRenew.currentExpiresAt
+    );
+    if (!error) closeRenewConfirm();
   }
 
   function openDeleteConfirm(subscriber) {
@@ -440,14 +509,13 @@ export default function SubscriptionsPage({ onLogout }) {
                               <p>{formatDate(request.created_at)}</p>
                             </td>
                             <td className="border-b border-border-subtle px-4 py-4 align-top">
-                              <span
-                                role="button"
-                                title="انقر للموافقة"
-                                onClick={() => handleApproveRenewal(request.id, request.businesses?.id)}
-                                className="inline-flex cursor-pointer rounded-full bg-warning-amber/10 px-3 py-1 text-xs font-semibold text-warning-amber"
+                              <button
+                                type="button"
+                                onClick={() => openRenewConfirm(request)}
+                                className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-primary-dark"
                               >
-                                بانتظار المراجعة
-                              </span>
+                                تجديد الاشتراك
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -541,6 +609,42 @@ export default function SubscriptionsPage({ onLogout }) {
                     className="rounded-2xl bg-error-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-error-red/90"
                   >
                     حذف نهائي
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmRenew.open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300" onClick={closeRenewConfirm} />
+              <div className="relative z-10 w-full max-w-md rounded-[26px] border border-white/10 bg-white/95 p-6 shadow-[0_28px_120px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl transition-transform duration-300 ease-out transform opacity-100 scale-100">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-on-surface">تأكيد تجديد الاشتراك</h3>
+                    <p className="mt-1 text-sm text-on-surface-variant">هل تريد تجديد اشتراك {confirmRenew.name} الآن؟ سيتم تحديث تاريخ التجديد لمدة 30 يومًا.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeRenewConfirm}
+                    className="rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmRenewal}
+                    className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+                  >
+                    تأكيد التجديد
                   </button>
                 </div>
               </div>

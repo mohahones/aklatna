@@ -226,9 +226,10 @@ export default function CashPaymentPage({ onLogout }) {
         if (!businessId) throw new Error('Business id missing');
 
         const now = new Date().toISOString();
+        const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         const { error: err1 } = await supabase
           .from('businesses')
-          .update({ is_active: true, created_at: now })
+          .update({ is_active: true, created_at: now, expires_at: newExpiresAt })
           .eq('id', businessId);
 
         if (err1) throw err1;
