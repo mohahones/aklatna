@@ -4,7 +4,6 @@ import SignupForm from "../components/auth/SignupForm";
 import SignupFormStep2 from "../components/auth/SignupFormStep2";
 import AuthToast from "../components/auth/AuthToast";
 import { useState } from "react";
-// ❌ قمنا بحذف الـ useSignupForm لأنه كان يرسل البيانات مبكراً
 import { useSessionStorageState } from "../hooks/useSessionStorageState";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -13,8 +12,6 @@ export default function SignupPage() {
   const [currentStep, setCurrentStep] = useSessionStorageState("auth-signup-current-step", 1);
   const [formDataStep1, setFormDataStep1] = useSessionStorageState("auth-signup-step1-confirmed", {});
   const [errors, setErrors] = useState({});
-
-  // حالات محلية لعرض التنبيهات إذا لزم الأمر
   const [status] = useState("idle");
   const [message] = useState("");
 
@@ -23,6 +20,14 @@ export default function SignupPage() {
 
     if (!formData.restaurantName?.trim()) {
       nextErrors.restaurantName = "اسم المطعم مطلوب";
+    }
+
+    if (!formData.restaurantNameEn?.trim()) {
+      nextErrors.restaurantNameEn = "اسم المطعم بالإنجليزية مطلوب";
+    }
+
+    if (!formData.businessType?.trim()) {
+      nextErrors.businessType = "نوع المشروع مطلوب";
     }
 
     if (!formData.phone?.trim()) {
@@ -45,6 +50,12 @@ export default function SignupPage() {
       nextErrors.password = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
     }
 
+    if (!formData.passwordConfirm?.trim()) {
+      nextErrors.passwordConfirm = "تأكيد كلمة المرور مطلوب";
+    } else if (formData.passwordConfirm !== formData.password) {
+      nextErrors.passwordConfirm = "كلمات المرور غير متطابقة";
+    }
+
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -55,7 +66,7 @@ export default function SignupPage() {
     setCurrentStep(2);
   }
 
-  // ⬇️ هنا التعديل الجوهري والذكي ⬇️
+  // ⬇️ تجميع البيانات وتمريرها للـ AccountPage فقط
   function handleStep2Submit(step2Data) {
     // 1. تجميع كافة البيانات من الخطوتين معاً
     const allSignupData = {
@@ -63,13 +74,7 @@ export default function SignupPage() {
       ...step2Data,
     };
 
-    // 2. تنظيف الـ sessionStorage المحلي للـ Signup
-    window.sessionStorage.removeItem("auth-signup-current-step");
-    window.sessionStorage.removeItem("auth-signup-step1-form");
-    window.sessionStorage.removeItem("auth-signup-step1-confirmed");
-    window.sessionStorage.removeItem("auth-signup-step2-hours");
-
-    // 3. التوجيه لصفحة الـ account وشحن البيانات كاملة داخل الـ state!
+    // 2. تمرير البيانات للـ AccountPage حيث سيتم الإرسال عند الضغط على "اشترك الآن"
     navigate("/account", {
       replace: true,
       state: { signupData: allSignupData }

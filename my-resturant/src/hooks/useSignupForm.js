@@ -18,9 +18,12 @@ const signupMessages = {
 
 export function useSignupForm({ onSuccess } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
   const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [errorType, setErrorType] = useState(""); // نوع الخطأ المحدد
+  const [errorStep, setErrorStep] = useState(""); // الخطوة التي حدث فيها الخطأ
+  const [errorDetails, setErrorDetails] = useState(null); // تفاصيل إضافية للخطأ
 
   function notify(nextMessage, nextStatus = "info") {
     setMessage(nextMessage);
@@ -30,6 +33,23 @@ export function useSignupForm({ onSuccess } = {}) {
       setMessage("");
       setStatus("idle");
     }, 2600);
+  }
+
+  function notifyError(errorMsg, type = "general", step = "", details = null) {
+    setMessage(errorMsg);
+    setStatus("error");
+    setErrorType(type);
+    setErrorStep(step);
+    setErrorDetails(details);
+    console.error(`❌ خطأ [${type}] في الخطوة: ${step}`, { errorMsg, details });
+    window.clearTimeout(notify.timeoutId);
+    notify.timeoutId = window.setTimeout(() => {
+      setMessage("");
+      setStatus("idle");
+      setErrorType("");
+      setErrorStep("");
+      setErrorDetails(null);
+    }, 3500);
   }
 
   function normalizeOpeningHours(openingHours = []) {
@@ -56,12 +76,35 @@ export function useSignupForm({ onSuccess } = {}) {
     return `logos/${suffix}.${extension}`;
   }
 
+  function buildCoverPath(file) {
+    const extension = file.type?.split("/")[1] || "jpg";
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `covers/${suffix}.${extension}`;
+  }
+
+  async function compressCover(file) {
+    return imageCompression(file, {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      initialQuality: 0.8,
+    });
+  }
+
   async function cleanupUploadedLogo(uploadedLogoPath) {
     if (!uploadedLogoPath) {
       return;
     }
 
     await supabase.storage.from(logoBucketName).remove([uploadedLogoPath]);
+  }
+
+  async function cleanupUploadedCover(uploadedCoverPath) {
+    if (!uploadedCoverPath) {
+      return;
+    }
+
+    await supabase.storage.from(logoBucketName).remove([uploadedCoverPath]);
   }
 
   async function handleSignup(formData) {
@@ -82,8 +125,22 @@ export function useSignupForm({ onSuccess } = {}) {
       nextFieldErrors.password = signupMessages.passwordTooShort;
     }
 
+    if (!formData.passwordConfirm?.trim()) {
+      nextFieldErrors.passwordConfirm = "تأكيد كلمة المرور مطلوب";
+    } else if (formData.passwordConfirm !== formData.password) {
+      nextFieldErrors.passwordConfirm = "كلمات المرور غير متطابقة";
+    }
+
     if (!formData.restaurantName?.trim()) {
       nextFieldErrors.restaurantName = "اسم المطعم مطلوب";
+    }
+
+    if (!formData.restaurantNameEn?.trim()) {
+      nextFieldErrors.restaurantNameEn = "اسم المطعم بالإنجليزية مطلوب";
+    }
+
+    if (!formData.businessType?.trim()) {
+      nextFieldErrors.businessType = "نوع المشروع مطلوب";
     }
 
     if (!formData.phone?.trim()) {
@@ -100,12 +157,12 @@ export function useSignupForm({ onSuccess } = {}) {
 
     if (Object.keys(nextFieldErrors).length > 0) {
       setFieldErrors(nextFieldErrors);
-      notify(signupMessages.fixMissingFields, "error");
+      notifyError(signupMessages.fixMissingFields, "validation_error", "التحقق من البيانات", nextFieldErrors);
       return;
     }
 
     if (!isSupabaseConfigured || !supabase) {
-      notify(signupMessages.authUnavailable, "error");
+      notifyError(signupMessages.authUnavailable, "supabase_unavailable", "تهيئة النظام");
       return;
     }
 
@@ -116,8 +173,11 @@ export function useSignupForm({ onSuccess } = {}) {
 
     let uploadedLogoPath = "";
     let logoUrl = "";
+    let uploadedCoverPath = "";
+    let coverUrl = "";
 
    try {
+      // =============== المرحلة 2: رفع الصور إلى Storage ===============
       if (formData.logoFile instanceof File) {
         const compressedLogo = await compressLogo(formData.logoFile);
         uploadedLogoPath = buildLogoPath(compressedLogo);
@@ -128,14 +188,78 @@ export function useSignupForm({ onSuccess } = {}) {
         });
 
         if (uploadError) {
-          throw new Error(uploadError.message || "فشل رفع شعار المطعم إلى التخزين.");
+          throw {
+            type: "logo_upload_failed",
+            step: "رفع الشعار",
+            message: `فشل رفع شعار المطعم: ${uploadError.message}`,
+            details: uploadError
+          };
         }
 
         const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedLogoPath);
         logoUrl = publicData.publicUrl;
       }
 
-      // 1. الخطوة الأولى: إنشاء الحساب الأساسي بالإيميل والباسورد فقط (حذفنا كائن options)
+      if (formData.coverFile instanceof File) {
+        const compressedCover = await compressCover(formData.coverFile);
+        uploadedCoverPath = buildCoverPath(compressedCover);
+
+        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedCoverPath, compressedCover, {
+          contentType: compressedCover.type || formData.coverFile.type,
+          upsert: false,
+        });
+
+        if (uploadError) {
+          throw {
+            type: "cover_upload_failed",
+            step: "رفع صورة الغلاف",
+            message: `فشل رفع صورة الغلاف: ${uploadError.message}`,
+            details: uploadError
+          };
+        }
+
+        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedCoverPath);
+        coverUrl = publicData.publicUrl;
+      }
+
+      // =============== المرحلة 3: تحضير بيانات ساعات العمل ===============
+      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map(dayRow => ({
+        day_of_week: dayRow.day,
+        open_time: dayRow.openTime,
+        close_time: dayRow.closeTime,
+        is_closed: !dayRow.isOpen
+      }));
+
+      // =============== المرحلة 4: Dry Run - التحقق من البيانات قبل إنشاء Auth ===============
+      const { error: dryRunError } = await supabase.rpc(
+        'register_business_with_hours',
+        {
+          p_user_id: "00000000-0000-0000-0000-000000000000",
+          p_name: formData.restaurantNameEn?.trim() || "",
+          p_name_ar: formData.restaurantName || "",
+          p_phone: formData.phone || "",
+          p_address: formData.address || "",
+          p_logo_url: logoUrl || null,
+          p_cover_url: coverUrl || null,
+          p_created_at: new Date().toISOString(),
+          p_business_type: formData.businessType || "restaurant",
+          p_hours: hoursToInsert,
+          p_is_dry_run: true
+        }
+      );
+
+      if (dryRunError) {
+        throw {
+          type: "dry_run_validation_failed",
+          step: "التحقق من صحة البيانات",
+          message: `فشل التحقق من البيانات: ${dryRunError.message}`,
+          details: dryRunError
+        };
+      }
+
+      // ✅ الدالة RETURNS VOID — إذا لا error = نجح التحقق
+
+      // =============== المرحلة 5: إنشاء Auth **فقط بعد التأكد من البيانات** ===============
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -148,54 +272,58 @@ export function useSignupForm({ onSuccess } = {}) {
       });
 
       if (signUpError) {
-        await cleanupUploadedLogo(uploadedLogoPath);
+        let authErrorMsg = signUpError.message || "فشل إنشاء الحساب";
         if (signUpError.message?.includes("already registered")) {
-          notify(signupMessages.emailExists, "error");
-        } else {
-          notify(signUpError.message || "فشل إنشاء الحساب، يرجى المحاولة لاحقاً.", "error");
+          authErrorMsg = "هذا البريد الإلكتروني مسجل بالفعل في النظام";
         }
-        return;
+        throw {
+          type: "auth_signup_failed",
+          step: "إنشاء حساب المستخدم",
+          message: authErrorMsg,
+          details: signUpError
+        };
       }
 
-      // 💡 هنا نمسك الـ ID المخفي للعميل من الحساب الجديد فوراً
-      const userId = data.user.id;
-
-      // 2. الخطوة الثانية: إرسال معلومات المطعم لجدول الـ businesses وربطها بالـ ID المخفي
-      const { error: businessError } = await supabase
-        .from('businesses') 
-        .insert({
-          id: userId, // الـ id المخفي يوضع هنا لربط جدول المطاعم بالحساب الشخصي
-          name_ar: formData.restaurantName || "",
-          name:formData.restaurantNameEn?.trim() || "",
-          phone: formData.phone || "",
-          address: formData.address || "",
-          logo_url: logoUrl,
-          is_active: false
-        });
-
-      if (businessError) {
-        throw new Error(businessError.message || "فشل حفظ بيانات المطعم.");
+      const userId = data.user?.id;
+      if (!userId) {
+        throw {
+          type: "auth_no_user_id",
+          step: "إنشاء حساب المستخدم",
+          message: "لم يتم الحصول على معرف المستخدم من النظام",
+          details: { user: data.user }
+        };
       }
 
-      // 3. الخطوة الثالثة: تحضير مصفوفة الأيام وربط كل سطر بالـ ID المخفي للعميل
-      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map(dayRow => ({
-        user_id: userId,          // عمود الربط الذي أنشأناه بالـ Supabase
-        day_of_week: dayRow.day,  // يرسل رقم اليوم (0-6) لعمود day_of_week
-        open_time: dayRow.openTime,
-        close_time: dayRow.closeTime,
-        is_closed: !dayRow.isOpen // إذا كان isOpen يساوي true فإن is_closed يكون false والعكس صحيح
-      }));
+      // =============== المرحلة 6: الإدراج الفعلي للبيانات ===============
+      const { error: insertError } = await supabase.rpc(
+        'register_business_with_hours',
+        {
+          p_user_id: userId,
+          p_name: formData.restaurantNameEn?.trim() || "",
+          p_name_ar: formData.restaurantName || "",
+          p_phone: formData.phone || "",
+          p_address: formData.address || "",
+          p_logo_url: logoUrl || null,
+          p_cover_url: coverUrl || null,
+          p_created_at: new Date().toISOString(),
+          p_business_type: formData.businessType || "restaurant",
+          p_hours: hoursToInsert,
+          p_is_dry_run: false
+        }
+      );
 
-      // 4. الخطوة الرابعة: إرسال الأيام الـ 7 دفعة واحدة لجدول ساعات العمل
-      const { error: hoursError } = await supabase
-        .from('restaurant_hours') 
-        .insert(hoursToInsert);
-
-      if (hoursError) {
-        throw new Error(hoursError.message || "فشل حفظ ساعات العمل الأسبوعية.");
+      if (insertError) {
+        throw {
+          type: "database_insert_failed",
+          step: "حفظ البيانات في قاعدة البيانات",
+          message: `فشل حفظ البيانات: ${insertError.message}`,
+          details: insertError
+        };
       }
 
-      // نجاح العملية بالكامل وتخزينها بالجداول المنفصلة
+      // ✅ الدالة RETURNS VOID — إذا لا error = نجح الإدراج
+
+      // =============== نجاح العملية بالكامل ===============
       notify(signupMessages.success, "success");
 
       if (typeof onSuccess === "function") {
@@ -203,11 +331,15 @@ export function useSignupForm({ onSuccess } = {}) {
       }
     } catch (err) {
       await cleanupUploadedLogo(uploadedLogoPath);
+      await cleanupUploadedCover(uploadedCoverPath);
 
-      if (err instanceof Error && err.message) {
-        notify(err.message, "error");
+      // معالجة الأخطاء المحددة
+      if (err.type && err.step) {
+        notifyError(err.message, err.type, err.step, err.details);
+      } else if (err instanceof Error && err.message) {
+        notifyError(err.message, "unknown_error", "عملية غير معروفة");
       } else {
-        notify("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.", "error");
+        notifyError("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.", "unexpected_error", "نظام");
       }
     } finally {
       setIsSubmitting(false);
@@ -219,6 +351,9 @@ export function useSignupForm({ onSuccess } = {}) {
     status,
     message,
     fieldErrors,
+    errorType,
+    errorStep,
+    errorDetails,
     handleSignup,
   };
 }
