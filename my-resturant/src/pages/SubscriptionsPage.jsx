@@ -218,9 +218,10 @@ export default function SubscriptionsPage({ onLogout }) {
     () =>
       subscribers.map((subscriber) => {
         const remaining = getRemainingTime(subscriber.expires_at, now);
+        const isExpiringSoon = !remaining.isExpired && remaining.milliseconds <= 5 * 86400000;
         return {
           ...subscriber,
-          remaining,
+          remaining: { ...remaining, isExpiringSoon },
           createdAtLabel: formatDate(subscriber.created_at),
           expiresAtLabel: formatDate(subscriber.expires_at),
         };
@@ -461,7 +462,7 @@ export default function SubscriptionsPage({ onLogout }) {
                               <p className="text-xs text-on-surface-variant">{subscriber.remaining.label}</p>
                             </td>
                             <td className="border-b border-border-subtle px-4 py-4 align-top">
-                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${subscriber.remaining.isExpired ? "bg-error-red/10 text-error-red" : "bg-success-green/10 text-success-green"}`}>
+                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${subscriber.remaining.isExpired ? "bg-error-red/10 text-error-red" : subscriber.remaining.isExpiringSoon ? "bg-pending-amber/10 text-pending-amber" : "bg-success-green/10 text-success-green"}`}>
                                 {subscriber.remaining.isExpired ? "منتهي" : "نشط"}
                               </span>
                             </td>
