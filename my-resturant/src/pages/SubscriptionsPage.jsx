@@ -406,11 +406,11 @@ export default function SubscriptionsPage({ onLogout }) {
           <div className="grid gap-4 sm:grid-cols-3 mb-6">
             <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
               <p className="text-sm text-on-surface-variant">المشتركين النشطين</p>
-              <p className="mt-3 text-3xl font-semibold text-on-surface">{activeCount}</p>
+              <p className="mt-3 text-3xl font-semibold text-success-green">{activeCount}</p>
             </div>
             <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
               <p className="text-sm text-on-surface-variant">قريب الانتهاء</p>
-              <p className="mt-3 text-3xl font-semibold text-warning-amber">{expiringSoonCount}</p>
+              <p className="mt-3 text-3xl font-semibold text-pending-amber">{expiringSoonCount}</p>
             </div>
             <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
               <p className="text-sm text-on-surface-variant">المنتهية</p>
@@ -531,25 +531,25 @@ export default function SubscriptionsPage({ onLogout }) {
                 </div>
               </div>
 
-              {expiredSubscribers.length > 0 && (
-                <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
-                  <div className="border-b border-border-subtle bg-surface-container px-4 py-4">
-                    <h2 className="text-lg font-semibold text-on-surface">الاشتراكات المنتهية</h2>
-                    <p className="text-sm text-on-surface-variant">المشتركين الذين انتهت صلاحية اشتراكهم ويمكن حذف حساباتهم.</p>
-                  </div>
+              <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
+                <div className="border-b border-border-subtle bg-surface-container px-4 py-4">
+                  <h2 className="text-lg font-semibold text-on-surface">الاشتراكات المنتهية</h2>
+                  <p className="text-sm text-on-surface-variant">المشتركين الذين انتهت صلاحية اشتراكهم ويمكن حذف حساباتهم.</p>
+                </div>
 
-                  <div className="mt-6 overflow-x-auto">
-                    <table className="min-w-full border-collapse text-right text-sm">
-                      <thead className="bg-surface-container text-on-surface-variant">
-                        <tr>
-                          <th className="border-b border-border-subtle px-4 py-3 font-semibold">اسم المطعم</th>
-                          <th className="border-b border-border-subtle px-4 py-3 font-semibold">الهاتف</th>
-                          <th className="border-b border-border-subtle px-4 py-3 font-semibold">انتهى منذ</th>
-                          <th className="border-b border-border-subtle px-4 py-3 font-semibold">الإجراء</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {expiredSubscribers.map((subscriber, index) => (
+                <div className="mt-6 overflow-x-auto">
+                  <table className="min-w-full border-collapse text-right text-sm">
+                    <thead className="bg-surface-container text-on-surface-variant">
+                      <tr>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">اسم المطعم</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">الهاتف</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">انتهى منذ</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">الإجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expiredSubscribers.length > 0 ? (
+                        expiredSubscribers.map((subscriber, index) => (
                           <tr key={subscriber.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
                             <td className="border-b border-border-subtle px-4 py-4 align-top">
                               <p className="font-semibold">{subscriber.name_ar || "غير معروف"}</p>
@@ -570,12 +570,18 @@ export default function SubscriptionsPage({ onLogout }) {
                               </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      ) : (
+                        <tr className="bg-white">
+                          <td colSpan="4" className="px-4 py-8 text-center text-sm text-on-surface-variant">
+                            لا توجد اشتراكات منتهية حالياً.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
