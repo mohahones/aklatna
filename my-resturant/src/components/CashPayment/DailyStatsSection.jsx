@@ -1,5 +1,3 @@
-import MaterialIcon from "../ui/MaterialIcon";
-
 export function DailyStatsSection({ dailyStats }) {
   if (dailyStats.length === 0) {
     return (

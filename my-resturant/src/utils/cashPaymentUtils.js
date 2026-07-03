@@ -40,7 +40,7 @@ export function mapBusinessRowToRequest(row) {
           minute: "2-digit",
         })
       : "—",
-    amount: 10,
+    amount: row.amount ?? row.total ?? row.due ?? 0,
     status: row.is_active ? "accepted" : "pending",
   };
 }

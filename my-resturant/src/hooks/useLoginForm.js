@@ -108,7 +108,7 @@ export function useLoginForm({ onSuccess } = {}) {
       // إذا كانت is_active = false → توجيه إلى صفحة الانتظار
       // إذا كانت is_active = true → توجيه إلى الداشبورد
       if (businessData?.is_active === false) {
-        navigate("/waiting", { replace: true });
+        navigate("/renew-subscription", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

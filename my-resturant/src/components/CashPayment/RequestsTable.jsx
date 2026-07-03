@@ -78,7 +78,7 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
                     <p className="text-sm">{request.date}</p>
                     <p className="text-xs text-on-surface-variant">{request.time}</p>
                   </td>
-                  <td className="px-4 py-4 text-sm font-semibold sm:px-5">${request.amount}.00</td>
+                  <td className="px-4 py-4 text-sm font-semibold sm:px-5">$10.00</td>
                   <td className="px-4 py-4 sm:px-5">
                     <div className={`flex items-center gap-1.5 ${meta.tone}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />

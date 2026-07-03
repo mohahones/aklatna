@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useCashPayment } from "../hooks/useCashPayment";
+import { isSupabaseConfigured, supabase } from "../supabaseClient";
 import { SidebarSection } from "../components/CashPayment/SidebarSection";
 import { FilterSection } from "../components/CashPayment/FilterSection";
 import { StatisticCard } from "../components/CashPayment/StatisticCard";
@@ -9,10 +9,8 @@ import { ToastNotification } from "../components/CashPayment/ToastNotification";
 import { isSameDay } from "../utils/cashPaymentUtils";
 
 export default function CashPaymentPage({ onLogout }) {
-  // Hooks
-  const { requests, handleApprove, handleReject } = useCashPayment();
-
   // State
+  const [requests, setRequests] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState(["pending", "accepted", "rejected"]);
@@ -44,6 +42,127 @@ export default function CashPaymentPage({ onLogout }) {
       return matchesStatus && matchesTime;
     });
   }, [requests, selectedStatuses, timeRange]);
+
+  // Load signup requests and realtime listener
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSignupRequests() {
+      if (!isSupabaseConfigured || !supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from('subscription_requests')
+          .select('*, business:businesses(name, name_ar, phone)')
+          .eq('status', 'pending')
+          .eq('request_type', 'SIGNUP')
+          .order('created_at', { ascending: false });
+
+        if (!mounted) return;
+        if (error) {
+          console.error('Error loading signup requests:', error);
+          setRequests([]);
+        } else {
+          const formatted = (data || []).map((item) => {
+            const biz = item.business || item.businesses || null;
+            const createdAt = item.created_at || item.createdAt || null;
+            const date = createdAt
+              ? new Date(createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })
+              : 'غير محدد';
+            const time = createdAt
+              ? new Date(createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+              : '';
+
+            return {
+              ...item,
+              businesses: biz,
+              restaurantName: biz?.name_ar || biz?.name || 'غير معروف',
+              amount: item.amount ?? item.businesses?.amount ?? 0,
+              createdAt,
+              date,
+              time,
+            };
+          });
+          setRequests(formatted);
+        }
+      } catch (err) {
+        console.error('Exception loading signup requests:', err);
+        setRequests([]);
+      }
+    }
+
+    loadSignupRequests();
+
+    const channel = isSupabaseConfigured && supabase
+      ? supabase
+          .channel('subscription-requests-signup')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'subscription_requests' },
+            async (payload) => {
+              const eventType = payload?.eventType || payload?.type;
+
+              // INSERT: fetch the full row with aliased business relation to normalize shape
+              if (payload?.new && eventType === 'INSERT') {
+                const n = payload.new;
+                if (n.request_type === 'SIGNUP' && n.status === 'pending') {
+                  try {
+                    const { data: row, error: fetchErr } = await supabase
+                      .from('subscription_requests')
+                      .select('*, business:businesses(name, name_ar, phone)')
+                      .eq('id', n.id)
+                      .single();
+
+                    if (fetchErr) {
+                      console.error('Error fetching inserted request row:', fetchErr);
+                      return;
+                    }
+
+                    const biz = row.business || row.businesses || null;
+                    const createdAt = row.created_at || row.createdAt || null;
+                    const date = createdAt
+                      ? new Date(createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })
+                      : 'غير محدد';
+                    const time = createdAt
+                      ? new Date(createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+                      : '';
+
+                    const formatted = {
+                      ...row,
+                      businesses: biz,
+                      restaurantName: biz?.name_ar || biz?.name || 'غير معروف',
+                      createdAt,
+                      date,
+                      time,
+                    };
+                    setRequests((cur) => [formatted, ...cur]);
+                  } catch (err) {
+                    console.error('Exception fetching inserted row:', err);
+                  }
+                }
+              }
+
+              // UPDATE: remove approved/rejected from pending list
+              if (payload?.new && eventType === 'UPDATE') {
+                const newRow = payload.new;
+                if (newRow.status === 'approved' || newRow.status === 'rejected') {
+                  setRequests((cur) => cur.filter((r) => r.id !== newRow.id));
+                }
+              }
+
+              // DELETE: remove deleted row
+              if (payload?.old && eventType === 'DELETE') {
+                setRequests((cur) => cur.filter((r) => r.id !== payload.old.id));
+              }
+            }
+          )
+          .subscribe()
+      : null;
+
+    return () => {
+      mounted = false;
+      if (channel) channel.unsubscribe();
+    };
+  }, []);
 
   const pendingCount = requests.filter((request) => request.status === "pending").length;
   const collectedToday = requests
@@ -100,23 +219,53 @@ export default function CashPaymentPage({ onLogout }) {
   async function handleAction(id, action) {
     const target = requests.find((request) => request.id === id);
 
-    if (action === "approve") {
-      const error = await handleApprove(id);
-      if (!error) {
+    if (action === 'approve') {
+      // Approve signup: activate business and mark request approved
+      try {
+        const businessId = target?.business_id || target?.businesses?.id;
+        if (!businessId) throw new Error('Business id missing');
+
+        const now = new Date().toISOString();
+        const { error: err1 } = await supabase
+          .from('businesses')
+          .update({ is_active: true, created_at: now })
+          .eq('id', businessId);
+
+        if (err1) throw err1;
+
+        const { error: err2 } = await supabase
+          .from('subscription_requests')
+          .update({ status: 'approved' })
+          .eq('id', id);
+
+        if (err2) throw err2;
+
+        setRequests((cur) => cur.filter((r) => r.id !== id));
+
         setToast({
-          type: "success",
-          title: "تمت الموافقة بنجاح",
-          message: `تم تفعيل خطة مطعم ${target?.restaurantName || "المطعم"} وتحديث حالة الدفع.`,
+          type: 'success',
+          title: 'تمت الموافقة بنجاح',
+          message: `تم تفعيل خطة مطعم ${target?.businesses?.name || 'المطعم'} وتحديث الحالة.`,
         });
+      } catch (err) {
+        console.error('Approve error:', err);
+        setToast({ type: 'error', title: 'خطأ', message: 'فشل اعتماد الطلب. حاول لاحقاً.' });
       }
-    } else if (action === "reject") {
-      const error = await handleReject(id);
-      if (!error) {
-        setToast({
-          type: "error",
-          title: "تم رفض الطلب",
-          message: `تم إرسال إشعار لمطعم ${target?.restaurantName || "المطعم"} لمراجعة الإدارة.`,
-        });
+    } else if (action === 'reject') {
+      try {
+        const { error } = await supabase
+          .from('subscription_requests')
+          .update({ status: 'rejected' })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        setRequests((cur) => cur.filter((r) => r.id !== id));
+
+        setToast({ type: 'error', title: 'تم رفض الطلب', message: `تم رفض طلب ${target?.businesses?.name || 'المطعم'}.` });
+      } catch (err) {
+        console.error('Reject error:', err);
+        setToast({ type: 'error', title: 'خطأ', message: 'فشل رفض الطلب. حاول لاحقاً.' });
       }
     }
   }

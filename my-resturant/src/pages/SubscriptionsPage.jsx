@@ -51,6 +51,7 @@ function formatDate(value) {
 
 export default function SubscriptionsPage({ onLogout }) {
   const [subscribers, setSubscribers] = useState([]);
+  const [subscriptionRequests, setSubscriptionRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [now, setNow] = useState(new Date());
@@ -63,6 +64,91 @@ export default function SubscriptionsPage({ onLogout }) {
   }, []);
 
   useEffect(() => {
+    async function loadSubscriptionRequests() {
+      if (!isSupabaseConfigured || !supabase) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("subscription_requests")
+          .select("*, businesses(name, name_ar, phone, is_active, expires_at)")
+          .eq("status", "pending")
+          .eq("request_type", "RENEWAL")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error loading subscription requests:", error);
+          setSubscriptionRequests([]);
+        } else {
+          const formatted = (data || []).map((item) => {
+            const createdAt = item.created_at || null;
+            return {
+              ...item,
+              businesses: item.businesses || null,
+              date: createdAt
+                ? new Date(createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })
+                : "غير محدد",
+              time: createdAt
+                ? new Date(createdAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })
+                : "",
+            };
+          });
+          setSubscriptionRequests(formatted);
+        }
+      } catch (err) {
+        console.error("Exception loading subscription requests:", err);
+        setSubscriptionRequests([]);
+      }
+    }
+
+    loadSubscriptionRequests();
+
+    const reqChannel = isSupabaseConfigured && supabase
+      ? supabase
+          .channel("subscription-requests")
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "subscription_requests" },
+            async (payload) => {
+              const eventType = payload?.eventType || payload?.type || payload?.event;
+              const newRow = payload?.new;
+              const oldRow = payload?.old;
+
+              if (eventType === "INSERT" && newRow?.request_type === "RENEWAL" && newRow?.status === "pending") {
+                const createdAt = newRow.created_at || null;
+                const formatted = {
+                  ...newRow,
+                  businesses: newRow.businesses || null,
+                  date: createdAt
+                    ? new Date(createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })
+                    : "غير محدد",
+                  time: createdAt
+                    ? new Date(createdAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })
+                    : "",
+                };
+                setSubscriptionRequests((current) => [formatted, ...current]);
+                return;
+              }
+
+              if (eventType === "UPDATE" && newRow?.status === "approved") {
+                setSubscriptionRequests((current) => current.filter((request) => request.id !== newRow.id));
+                return;
+              }
+
+              if (eventType === "DELETE" && oldRow) {
+                setSubscriptionRequests((current) => current.filter((request) => request.id !== oldRow.id));
+                return;
+              }
+            }
+          )
+          .subscribe()
+      : null;
+
+    return () => {
+      if (reqChannel) reqChannel.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     async function loadSubscribers() {
       if (!isSupabaseConfigured || !supabase) {
         setError("Supabase غير مهيأة");
@@ -71,12 +157,26 @@ export default function SubscriptionsPage({ onLogout }) {
       }
 
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("businesses")
-          .select("id, name_ar, phone, expires_at, created_at, is_active")
-          .not("created_at", "is", null)
+          .select("id, name_ar, phone, expires_at, created_at, is_active, renewal_requested_at")
           .eq("is_active", true)
+          .not("created_at", "is", null)
           .order("created_at", { ascending: false });
+
+        let { data, error } = await query;
+
+        if (error && /renewal_requested_at/.test(error.message || "")) {
+          const fallbackQuery = supabase
+            .from("businesses")
+            .select("id, name_ar, phone, expires_at, created_at, is_active")
+            .eq("is_active", true)
+            .not("created_at", "is", null)
+            .order("created_at", { ascending: false });
+          const fallbackResult = await fallbackQuery;
+          data = fallbackResult.data;
+          error = fallbackResult.error;
+        }
 
         if (error) {
           console.error("Error loading subscribers:", error);
@@ -131,8 +231,33 @@ export default function SubscriptionsPage({ onLogout }) {
   const expiringSoonCount = enhancedSubscribers.filter(
     (subscriber) => !subscriber.remaining.isExpired && subscriber.remaining.milliseconds <= 7 * 86400000
   ).length;
+  // Use the `subscription_requests` table for pending renewals (joined with `businesses`)
+  const expiringRenewalRequests = subscriptionRequests || [];
   const expiredSubscribers = enhancedSubscribers.filter((subscriber) => subscriber.remaining.isExpired);
   const expiredCount = expiredSubscribers.length;
+
+  // Approve renewal request (call RPC and optimistic update)
+  async function handleApproveRenewal(requestId, businessId) {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    try {
+      const { error } = await supabase.rpc('renew_business_subscription', {
+        target_business_id: businessId,
+      });
+
+      if (error) {
+        console.error('RPC error:', error);
+        return error;
+      }
+
+      // optimistic remove
+      setSubscriptionRequests((cur) => cur.filter((r) => r.id !== requestId));
+      return null;
+    } catch (err) {
+      console.error('Exception calling RPC:', err);
+      return err;
+    }
+  }
 
   function openDeleteConfirm(subscriber) {
     setConfirmDelete({
@@ -149,19 +274,23 @@ export default function SubscriptionsPage({ onLogout }) {
   async function handleDeleteSubscriber() {
     if (!isSupabaseConfigured || !supabase || !confirmDelete.id) return;
 
-    const { error } = await supabase
-      .from("businesses")
-      .delete()
-      .eq("id", confirmDelete.id);
+    try {
+      const { error } = await supabase.rpc("admin_reject_and_delete_business", {
+        p_business_id: confirmDelete.id,
+      });
 
-    if (error) {
-      console.error("Error deleting subscriber:", error);
+      if (error) {
+        console.error("Error deleting subscriber:", error);
+        setError("فشل حذف الحساب. حاول مرة أخرى.");
+        return;
+      }
+
+      setSubscribers((current) => current.filter((subscriber) => subscriber.id !== confirmDelete.id));
+      closeDeleteConfirm();
+    } catch (err) {
+      console.error("Exception deleting subscriber:", err);
       setError("فشل حذف الحساب. حاول مرة أخرى.");
-      return;
     }
-
-    setSubscribers((current) => current.filter((subscriber) => subscriber.id !== confirmDelete.id));
-    closeDeleteConfirm();
   }
 
   return (
@@ -228,10 +357,6 @@ export default function SubscriptionsPage({ onLogout }) {
             <div className="rounded-3xl border border-error-red/20 bg-error-red/10 p-8 text-center text-sm text-error-red">
               {error}
             </div>
-          ) : enhancedSubscribers.length === 0 ? (
-            <div className="rounded-3xl border border-border-subtle bg-white/90 p-10 text-center text-sm text-on-surface-variant">
-              لا يوجد مشتركين لعرضهم حالياً.
-            </div>
           ) : (
             <div className="space-y-6">
               <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
@@ -250,28 +375,89 @@ export default function SubscriptionsPage({ onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {enhancedSubscribers.map((subscriber, index) => (
-                        <tr key={subscriber.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
-                          <td className="border-b border-border-subtle px-4 py-4 align-top">
-                            <p className="font-semibold">{subscriber.name_ar || "غير معروف"}</p>
-                          </td>
-                          <td className="border-b border-border-subtle px-4 py-4 align-top">
-                            <p>{subscriber.phone || "-"}</p>
-                          </td>
-                          <td className="border-b border-border-subtle px-4 py-4 align-top">
-                            <p>{subscriber.createdAtLabel}</p>
-                          </td>
-                          <td className="border-b border-border-subtle px-4 py-4 align-top">
-                            <p>{subscriber.expiresAtLabel}</p>
-                            <p className="text-xs text-on-surface-variant">{subscriber.remaining.label}</p>
-                          </td>
-                          <td className="border-b border-border-subtle px-4 py-4 align-top">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${subscriber.remaining.isExpired ? "bg-error-red/10 text-error-red" : "bg-success-green/10 text-success-green"}`}>
-                              {subscriber.remaining.isExpired ? "منتهي" : "نشط"}
-                            </span>
+                      {enhancedSubscribers.length > 0 ? (
+                        enhancedSubscribers.map((subscriber, index) => (
+                          <tr key={subscriber.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p className="font-semibold">{subscriber.name_ar || "غير معروف"}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p>{subscriber.phone || "-"}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p>{subscriber.createdAtLabel}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p>{subscriber.expiresAtLabel}</p>
+                              <p className="text-xs text-on-surface-variant">{subscriber.remaining.label}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${subscriber.remaining.isExpired ? "bg-error-red/10 text-error-red" : "bg-success-green/10 text-success-green"}`}>
+                                {subscriber.remaining.isExpired ? "منتهي" : "نشط"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr className="bg-white">
+                          <td colSpan="5" className="px-4 py-8 text-center text-sm text-on-surface-variant">
+                            لا يوجد مشتركين لعرضهم حالياً.
                           </td>
                         </tr>
-                      ))}
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
+                <div className="border-b border-border-subtle bg-surface-container px-4 py-4">
+                  <h2 className="text-lg font-semibold text-on-surface">طلبات تجديد الاشتراك</h2>
+                  <p className="text-sm text-on-surface-variant">الطلبات التي تم إرسالها من صفحة تجديد الاشتراك في انتظار المراجعة.</p>
+                </div>
+
+                <div className="mt-6 overflow-x-auto">
+                  <table className="min-w-full border-collapse text-right text-sm">
+                    <thead className="bg-surface-container text-on-surface-variant">
+                      <tr>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">اسم المطعم</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">الهاتف</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">تم الطلب في</th>
+                        <th className="border-b border-border-subtle px-4 py-3 font-semibold">الحالة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expiringRenewalRequests.length > 0 ? (
+                        expiringRenewalRequests.map((request, index) => (
+                          <tr key={request.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p className="font-semibold">{request.businesses?.name || "غير معروف"}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p>{request.businesses?.phone || "-"}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <p>{formatDate(request.created_at)}</p>
+                            </td>
+                            <td className="border-b border-border-subtle px-4 py-4 align-top">
+                              <span
+                                role="button"
+                                title="انقر للموافقة"
+                                onClick={() => handleApproveRenewal(request.id, request.businesses?.id)}
+                                className="inline-flex cursor-pointer rounded-full bg-warning-amber/10 px-3 py-1 text-xs font-semibold text-warning-amber"
+                              >
+                                بانتظار المراجعة
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr className="bg-white">
+                          <td colSpan="4" className="px-4 py-8 text-center text-sm text-on-surface-variant">
+                            لا توجد طلبات تجديد حالياً.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
