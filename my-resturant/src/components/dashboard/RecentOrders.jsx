@@ -1,4 +1,4 @@
-// RecentOrders uses JSX only; no React import required
+import { Link } from "react-router-dom";
 
 const orders = [
   { id: "#ORD-4291", name: "سارة جينكينز", price: "$42.50", status: "تم التوصيل", color: "bg-success-green" },
@@ -13,7 +13,7 @@ export default function RecentOrders() {
     <section className="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-6 text-right overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold">الطلبات الأخيرة</h3>
-        <a className="text-primary text-xs hover:underline" href="#">عرض الكل</a>
+        <Link to="/dashboard/orders" className="text-primary text-xs hover:underline">عرض الكل</Link>
       </div>
       <div className="space-y-4">
         {orders.map((order, idx) => (

@@ -6,7 +6,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-surface-bg flex">
       <Sidebar />
 
-      <main className="flex-1 mr-[260px]">
+      <main className="flex-1 mr-[260px] min-w-0">
         <header className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-end">
           <div className="flex items-center gap-4">
             <button className="p-2 text-secondary hover:bg-surface-container-low rounded-full transition-colors relative">
