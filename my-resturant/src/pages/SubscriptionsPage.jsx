@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SidebarSection } from "../components/CashPayment/SidebarSection";
 import { isSupabaseConfigured, supabase } from "../supabaseClient";
 
