@@ -1,10 +1,10 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/dashboard/Sidebar";
 
-export default function Dashboard() {
+export default function Dashboard({ onLogout }) {
   return (
     <div className="min-h-screen bg-surface-bg flex">
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
 
       <main className="flex-1 mr-[260px] min-w-0">
         <header className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-end">
