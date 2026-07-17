@@ -93,7 +93,7 @@ export default function SignupPage() {
       <main className="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-24">
         <div className="w-full max-w-[520px]">
           <div className="md:hidden mb-8">
-            <h1 className="font-headline-md text-headline-md text-primary font-bold">بيسترو برو</h1>
+            <h1 className="font-headline-md text-headline-md text-primary font-bold">أكلاتنا</h1>
             <p className="font-body-md text-body-md text-secondary">بوابة الشركاء</p>
           </div>
 
@@ -149,7 +149,7 @@ export default function SignupPage() {
         </div>
       </main>
 
-      {message && <AuthToast type={status} message={message} />}
+      {message && <AuthToast status={status} message={message} />}
     </div>
   );
 }

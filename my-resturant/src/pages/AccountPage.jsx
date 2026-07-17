@@ -8,7 +8,7 @@ export default function AccountPage() {
     const navigate = useNavigate();
     const signupData = location.state?.signupData;
 
-    const { isSubmitting, status, message, errorType, errorStep, handleSignup } = useSignupForm({
+    const { isSubmitting, status, message, errorType, errorStep, errorDetails, handleSignup } = useSignupForm({
         onSuccess: () => {
             setIsSubmitted(true);
             window.sessionStorage.removeItem("auth-signup-current-step");
@@ -114,10 +114,37 @@ export default function AccountPage() {
                         </button>
 
                         {submitMessage || message ? (
-                            <div className={`mt-4 rounded-lg p-3 text-sm font-medium ${isSubmitted || status === "success" ? "bg-success-green/10 text-success-green" : "bg-error-red/10 text-error-red"}`}>
-                                <p className="font-bold mb-1">{message}</p>
+                            <div
+                                className={`mt-4 rounded-lg p-3 text-sm font-medium ${
+                                    isSubmitted || status === "success"
+                                        ? "bg-success-green/10 text-success-green"
+                                        : "bg-error-red/10 text-error-red"
+                                }`}
+                            >
+                                <p className="font-bold leading-relaxed">
+                                    {typeof message === "string" && message !== "{}"
+                                        ? message
+                                        : submitMessage || "حدث خطأ أثناء إنشاء الحساب"}
+                                </p>
+                                {errorDetails?.code || errorDetails?.status ? (
+                                    <p className="mt-2 text-xs leading-relaxed opacity-90">
+                                        {[
+                                            errorDetails.code && `الرمز: ${errorDetails.code}`,
+                                            errorDetails.status && `الحالة: ${errorDetails.status}`,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" — ")}
+                                    </p>
+                                ) : null}
+                                {errorDetails?.message &&
+                                    errorDetails.message !== message &&
+                                    errorDetails.message !== "{}" && (
+                                        <p className="mt-2 text-xs leading-relaxed opacity-90">
+                                            تفاصيل النظام: {errorDetails.message}
+                                        </p>
+                                    )}
                                 {errorStep && (
-                                    <p className="text-xs opacity-80">الخطوة: {errorStep}</p>
+                                    <p className="mt-2 text-xs opacity-80">الخطوة: {errorStep}</p>
                                 )}
                                 {errorType && (
                                     <p className="text-xs opacity-80">نوع الخطأ: {errorType}</p>
@@ -133,7 +160,7 @@ export default function AccountPage() {
                             </div>
                             <h3 className="mb-4 font-display-lg text-2xl text-on-surface">طلبك قيد المراجعة</h3>
                             <p className="mb-8 max-w-md font-body-md text-body-md text-secondary">
-                                سيتم الرد خلال 24 ساعة. شكراً لثقتك ببيسترو برو.
+                                سيتم الرد خلال 24 ساعة. شكراً لثقتك بأكلاتنا.
                             </p>
                             <button
                                 type="button"

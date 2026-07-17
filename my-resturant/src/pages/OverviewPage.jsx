@@ -3,14 +3,15 @@ import StatCard from "../components/dashboard/StatCard";
 import SalesChart from "../components/dashboard/SalesChart";
 import RecentOrders from "../components/dashboard/RecentOrders";
 import DayDetailsModal from "../components/dashboard/DayDetailsModal";
-import useSubscription from "../hooks/useSubscription";
+import RenewSubscriptionButton from "../components/dashboard/RenewSubscriptionButton";
+import useSubscription, { SUBSCRIPTION_PERIOD_DAYS } from "../hooks/useSubscription";
 
 export default function OverviewPage() {
   const [chartRange, setChartRange] = useState(7);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState("");
 
-  const { daysLeft, totalDays, usedDays, progressPercent, loading: subLoading } = useSubscription();
+  const { daysLeft, progressPercent, loading: subLoading } = useSubscription();
 
   const handleBarClick = (day) => {
     setSelectedDay(day);
@@ -26,7 +27,7 @@ export default function OverviewPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
         {stats.map((stat, idx) => (
           <StatCard
             key={idx}
@@ -36,15 +37,16 @@ export default function OverviewPage() {
             iconClass={stat.iconClass}
           >
             {stat.title === "حالة الاشتراك" ? (
-              <div className="mt-4 space-y-2">
+              <>
                 <div className="flex justify-between items-center text-[10px] font-medium text-secondary">
                   <span>ينتهي خلال {subLoading ? "..." : `${daysLeft} يوماً`}</span>
-                  <span>{subLoading ? "..." : `${usedDays} / ${totalDays} يوم`}</span>
+                  <span>{subLoading ? "..." : `${SUBSCRIPTION_PERIOD_DAYS} / ${daysLeft} يوم`}</span>
                 </div>
                 <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
                   <div className="bg-primary h-full rounded-full" style={{ width: `${progressPercent}%` }}></div>
                 </div>
-              </div>
+                <RenewSubscriptionButton />
+              </>
             ) : null}
           </StatCard>
         ))}

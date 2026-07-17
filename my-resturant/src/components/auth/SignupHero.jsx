@@ -15,7 +15,7 @@ export default function SignupHero() {
             <MaterialIcon name="trending_up" className="text-white text-2xl" />
           </div>
           <p className="font-body-md text-body-md">
-            انضم إلى أكثر من 5,000 شريك مطعم زادوا إيراداتهم بنسبة 25% في عامهم الأول مع بيسترو برو.
+            انضم إلى أكثر من 5,000 شريك مطعم زادوا إيراداتهم بنسبة 25% في عامهم الأول مع أكلاتنا.
           </p>
         </div>
       </div>

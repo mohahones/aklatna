@@ -1,101 +1,31 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MaterialIcon from "../components/ui/MaterialIcon";
-import { isSupabaseConfigured, supabase } from "../supabaseClient";
+import RenewSubscriptionConfirmModal from "../components/dashboard/RenewSubscriptionConfirmModal";
+import useRenewSubscription from "../hooks/useRenewSubscription";
 
 export default function RenewSubscriptionPage({ onLogout }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasRequested, setHasRequested] = useState(false);
-  const [message, setMessage] = useState("");
+  const { isSubmitting, hasRequested, message, isChecking, sendRenewRequest } = useRenewSubscription();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const isBlocked = isChecking || isSubmitting || hasRequested;
+  const canSendRequest = !isBlocked;
 
-    async function loadRenewalStatus() {
-      if (!isSupabaseConfigured || !supabase) return;
+  const buttonLabel = hasRequested
+    ? "تم إرسال طلب التجديد"
+    : isChecking
+      ? "جاري التحقق..."
+      : isSubmitting
+        ? "جاري الإرسال..."
+        : "طلب تجديد الاشتراك";
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!isMounted) return;
-      const userId = session?.user?.id;
-      if (!userId) return;
+  function openRequestModal() {
+    if (!canSendRequest) return;
+    setIsModalOpen(true);
+  }
 
-      try {
-        const { data, error } = await supabase
-          .from("subscription_requests")
-          .select("id, created_at")
-          .eq("business_id", userId)
-          .eq("status", "pending")
-          .eq("request_type", "RENEWAL")
-          .limit(1);
-
-        if (!error && data && data.length > 0) {
-          setHasRequested(true);
-        }
-      } catch (err) {
-        console.error("Error checking renewal status:", err);
-      }
-    }
-
-    loadRenewalStatus();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  async function handleSendRenewRequest() {
-    if (!isSupabaseConfigured || !supabase || isSubmitting) return;
-
-    setIsSubmitting(true);
-    setMessage("");
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const userId = session?.user?.id;
-    if (!userId) {
-      setMessage("يرجى تسجيل الدخول مجدداً قبل إرسال الطلب.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      // prevent duplicate pending requests
-      const { data: existing } = await supabase
-        .from("subscription_requests")
-        .select("id")
-        .eq("business_id", userId)
-        .eq("status", "pending")
-        .eq("request_type", "RENEWAL")
-        .limit(1);
-
-      if (existing && existing.length > 0) {
-        setHasRequested(true);
-        setMessage("تم إرسال طلب تجديد سابقاً وهو قيد الانتظار.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const { error } = await supabase
-        .from("subscription_requests")
-        .insert([
-          { business_id: userId, request_type: "RENEWAL", status: "pending" },
-        ]);
-
-      if (error) {
-        setMessage(error.message || "حدث خطأ أثناء إرسال طلب التجديد. حاول مرة أخرى.");
-        console.error(error);
-      } else {
-        setHasRequested(true);
-        setMessage("تم إرسال طلبك إلى الإدارة. سيتم مراجعة الطلب قريباً.");
-      }
-    } catch (err) {
-      console.error("Exception sending renewal request:", err);
-      setMessage("حدث خطأ أثناء إرسال طلب التجديد. حاول مرة أخرى.");
-    }
-
-    setIsSubmitting(false);
+  async function handleConfirm() {
+    const success = await sendRenewRequest();
+    if (success) setIsModalOpen(false);
   }
 
   return (
@@ -125,11 +55,11 @@ export default function RenewSubscriptionPage({ onLogout }) {
             <div className="space-y-4">
               <button
                 type="button"
-                onClick={handleSendRenewRequest}
-                disabled={isSubmitting || hasRequested}
-                className="w-full rounded-2xl bg-primary px-4 py-4 text-lg font-bold text-white shadow-sm shadow-primary/20 transition duration-200 hover:-translate-y-0.5 hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-primary/50"
+                onClick={openRequestModal}
+                disabled={!canSendRequest}
+                className="w-full rounded-2xl bg-primary px-4 py-4 text-lg font-bold text-white shadow-sm shadow-primary/20 transition duration-200 hover:-translate-y-0.5 hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-primary/50 disabled:hover:translate-y-0"
               >
-                {hasRequested ? "تم إرسال طلب التجديد" : isSubmitting ? "جاري الإرسال..." : "طلب تجديد الاشتراك"}
+                {buttonLabel}
               </button>
               <button
                 type="button"
@@ -147,6 +77,13 @@ export default function RenewSubscriptionPage({ onLogout }) {
           </div>
         </div>
       </main>
+
+      <RenewSubscriptionConfirmModal
+        isOpen={isModalOpen && canSendRequest}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirm}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }
