@@ -93,22 +93,26 @@ export function useLoginForm({ onSuccess } = {}) {
         onSuccess(data.session ?? null);
       }
 
-      if (data.user?.user_metadata?.role === "admin") {
+      if (data.user?.app_metadata?.role === "admin") {
         navigate("/cash-payment", { replace: true });
         return;
       }
 
-      // ✅ قراءة حالة is_active من جدول businesses
+      // نفس منطق useAuth.getUserLandingPath
       const { data: businessData } = await supabase
         .from("businesses")
-        .select("is_active")
+        .select("is_active, expires_at")
         .eq("id", data.user?.id)
         .single();
 
-      // إذا كانت is_active = false → توجيه إلى صفحة الانتظار
-      // إذا كانت is_active = true → توجيه إلى الداشبورد
-      if (businessData?.is_active === false) {
-        navigate("/renew-subscription", { replace: true });
+      const isActive = businessData?.is_active ?? false;
+      const expiresAt = businessData?.expires_at;
+      const hasExpired =
+        Boolean(expiresAt) && new Date(expiresAt).getTime() < Date.now();
+      const isBusinessActive = isActive && !hasExpired;
+
+      if (!isBusinessActive) {
+        navigate(hasExpired ? "/renew-subscription" : "/waiting", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }

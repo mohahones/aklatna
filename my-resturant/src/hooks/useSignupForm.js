@@ -35,13 +35,60 @@ export function useSignupForm({ onSuccess } = {}) {
     }, 2600);
   }
 
+  function extractErrorInfo(error) {
+    if (!error) {
+      return { text: "", code: "", status: "", raw: "" };
+    }
+
+    if (typeof error === "string") {
+      return { text: error, code: "", status: "", raw: error };
+    }
+
+    const text = [
+      error.message,
+      error.error_description,
+      error.msg,
+      error.error,
+      error.cause?.message,
+    ]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean) || "";
+
+    const code = String(error.code || error.error_code || "");
+    const status = String(error.status || error.statusCode || "");
+    const raw = [text, code && `code=${code}`, status && `status=${status}`]
+      .filter(Boolean)
+      .join(" | ");
+
+    return { text, code, status, raw };
+  }
+
   function notifyError(errorMsg, type = "general", step = "", details = null) {
-    setMessage(errorMsg);
+    const info = extractErrorInfo(details);
+    const primary =
+      typeof errorMsg === "string" && errorMsg.trim() && errorMsg.trim() !== "{}"
+        ? errorMsg.trim()
+        : "";
+    const displayMessage =
+      primary ||
+      info.text ||
+      "فشل إنشاء الحساب. تأكد أنك مسجّل خروج، وأن الإيميل غير مستخدم، وأن الاتصال يعمل.";
+
+    setMessage(displayMessage);
     setStatus("error");
     setErrorType(type);
     setErrorStep(step);
-    setErrorDetails(details);
-    console.error(`❌ خطأ [${type}] في الخطوة: ${step}`, { errorMsg, details });
+    setErrorDetails({
+      message: info.text || displayMessage,
+      code: info.code,
+      status: info.status,
+      raw: info.raw || displayMessage,
+    });
+    console.error(`❌ خطأ [${type}] في الخطوة: ${step}`, {
+      displayMessage,
+      details,
+      extracted: info,
+    });
     window.clearTimeout(notify.timeoutId);
     notify.timeoutId = window.setTimeout(() => {
       setMessage("");
@@ -49,7 +96,36 @@ export function useSignupForm({ onSuccess } = {}) {
       setErrorType("");
       setErrorStep("");
       setErrorDetails(null);
-    }, 3500);
+    }, 10000);
+  }
+
+  function resolveAuthSignupMessage(signUpError) {
+    const { text: raw, code } = extractErrorInfo(signUpError);
+    const haystack = `${raw} ${code}`;
+
+    if (/already registered|already been registered|User already registered|email_exists/i.test(haystack)) {
+      return signupMessages.emailExists;
+    }
+    if (/password/i.test(haystack) && /weak|least|characters|short/i.test(haystack)) {
+      return "كلمة المرور ضعيفة أو قصيرة جداً";
+    }
+    if (/rate limit|too many|over_request_rate/i.test(haystack)) {
+      return "محاولات كثيرة، حاول بعد قليل";
+    }
+    if (/signup is disabled|signups not allowed/i.test(haystack)) {
+      return "التسجيل معطّل حالياً من إعدادات النظام";
+    }
+    if (/invalid.*email|email.*invalid|validation_failed/i.test(haystack)) {
+      return signupMessages.invalidEmail;
+    }
+    if (/failed to fetch|network|fetch/i.test(haystack)) {
+      return "فشل الاتصال بالخادم. تحقق من الإنترنت أو إعدادات Supabase.";
+    }
+    if (/session|already.*logged|user already/i.test(haystack)) {
+      return "يوجد جلسة مفتوحة. سجّل خروج ثم أعد التسجيل.";
+    }
+
+    return raw || "فشل إنشاء الحساب. جرّب إيميل جديد بعد تسجيل الخروج.";
   }
 
   function normalizeOpeningHours(openingHours = []) {
@@ -260,6 +336,9 @@ export function useSignupForm({ onSuccess } = {}) {
       // ✅ الدالة RETURNS VOID — إذا لا error = نجح التحقق
 
       // =============== المرحلة 5: إنشاء Auth **فقط بعد التأكد من البيانات** ===============
+      // تسجيل خروج أي جلسة حالية (مثل الأدمن) حتى لا يفشل signUp بصمت
+      await supabase.auth.signOut({ scope: "local" });
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -267,20 +346,27 @@ export function useSignupForm({ onSuccess } = {}) {
           data: {
             role: "restaurant",
             is_active: false,
-          }
-        }
+          },
+        },
       });
 
       if (signUpError) {
-        let authErrorMsg = signUpError.message || "فشل إنشاء الحساب";
-        if (signUpError.message?.includes("already registered")) {
-          authErrorMsg = "هذا البريد الإلكتروني مسجل بالفعل في النظام";
-        }
+        console.error("signUp failed:", {
+          message: signUpError.message,
+          code: signUpError.code,
+          status: signUpError.status,
+          name: signUpError.name,
+        });
         throw {
           type: "auth_signup_failed",
           step: "إنشاء حساب المستخدم",
-          message: authErrorMsg,
-          details: signUpError
+          message: resolveAuthSignupMessage(signUpError),
+          details: {
+            message: signUpError.message || "",
+            code: signUpError.code || "",
+            status: signUpError.status || "",
+            name: signUpError.name || "",
+          },
         };
       }
 

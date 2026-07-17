@@ -60,7 +60,7 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
           </thead>
           <tbody className="divide-y divide-border-subtle">
             {filteredRequests.map((request) => {
-              const meta = STATUS_META[request.status];
+              const meta = STATUS_META[request.status] || STATUS_META.pending;
               return (
                 <tr key={request.id} className="transition-colors duration-150 hover:bg-background">
                   <td className="px-4 py-4 sm:px-5">
