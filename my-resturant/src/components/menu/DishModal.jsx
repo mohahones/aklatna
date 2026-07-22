@@ -358,12 +358,12 @@ export default function DishModal({ isOpen, mode, categories, initialData, onClo
               </div>
               <div className="col-span-1 space-y-2">
                 <label className="font-body-md font-bold text-on-surface">
-                  السعر الأساسي ($) <span className="text-error">*</span>
+                  السعر الأساسي <span className="text-error">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary font-medium">$</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary font-medium">ل.س</span>
                   <input
-                    className={`w-full border rounded-lg py-2.5 pr-8 pl-4 focus:ring-2 focus:ring-primary focus:border-primary text-body-md ${
+                    className={`w-full border rounded-lg py-2.5 pr-16 pl-4 focus:ring-2 focus:ring-primary focus:border-primary text-body-md ${
                       fieldErrors.price ? "border-error" : "border-border-subtle"
                     }`}
                     placeholder="0.00"
@@ -425,9 +425,9 @@ export default function DishModal({ isOpen, mode, categories, initialData, onClo
                       />
                     </div>
                     <div className="w-24 relative">
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-label-sm">$</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary text-label-sm">ل.س</span>
                       <input
-                        className="w-full border border-border-subtle rounded-lg py-2 pr-6 pl-2 text-body-md focus:ring-2 focus:ring-primary focus:border-primary"
+                        className="w-full border border-border-subtle rounded-lg py-2 pr-12 pl-2 text-body-md focus:ring-2 focus:ring-primary focus:border-primary"
                         placeholder="0.00"
                         step="0.01"
                         type="number"

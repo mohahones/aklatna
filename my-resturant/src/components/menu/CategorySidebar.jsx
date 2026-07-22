@@ -5,7 +5,6 @@ export default function CategorySidebar({
   onAddCategory,
   onDeleteCategory,
 }) {
-  const canDelete = categories.length > 1;
   return (
     <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6 shadow-sm sticky top-24">
       <h3 className="font-headline-md text-headline-md mb-4 text-on-surface">الفئات</h3>
@@ -14,16 +13,14 @@ export default function CategorySidebar({
           const isActive = category.id === activeCategoryId;
           return (
             <div key={category.id} className="flex items-center gap-2">
-              {canDelete && (
-                <button
-                  type="button"
-                  onClick={() => onDeleteCategory(category)}
-                  className="p-2.5 rounded-lg text-error hover:bg-error-container/20 transition-colors shrink-0"
-                  aria-label={`حذف فئة ${category.name}`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">delete</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => onDeleteCategory(category)}
+                className="p-2.5 rounded-lg text-error hover:bg-error-container/20 transition-colors shrink-0"
+                aria-label={`حذف فئة ${category.name}`}
+              >
+                <span className="material-symbols-outlined text-[20px]">delete</span>
+              </button>
               <button
                 type="button"
                 onClick={() => onSelectCategory(category.id)}

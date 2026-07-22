@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import CategorySidebar from "../components/menu/CategorySidebar";
 import DishCard from "../components/menu/DishCard";
 import DishModal from "../components/menu/DishModal";
+import DishDeleteModal from "../components/menu/DishDeleteModal";
 import CategoryModal from "../components/menu/CategoryModal";
 import CategoryDeleteModal from "../components/menu/CategoryDeleteModal";
 import useMenu from "../hooks/menu/useMenu";
@@ -16,12 +17,14 @@ export default function MenuPage() {
     deleteCategory,
     saveDish,
     toggleDishAvailability,
+    deleteDish,
   } = useMenu();
 
   const [activeCategoryId, setActiveCategoryId] = useState("");
   const [dishModal, setDishModal] = useState({ open: false, mode: "add", dishId: null });
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [dishToDelete, setDishToDelete] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
 
@@ -66,6 +69,29 @@ export default function MenuPage() {
     if (toggleError) {
       showActionError(toggleError.message || "فشل تحديث حالة التوفر");
     }
+  }
+
+  function handleRequestDeleteDish(dishId) {
+    const dish = dishes.find((d) => d.id === dishId);
+    if (dish) {
+      setDishToDelete(dish);
+    }
+  }
+
+  async function handleConfirmDeleteDish() {
+    if (!dishToDelete) return;
+
+    setIsBusy(true);
+    const { error: deleteError } = await deleteDish(dishToDelete.id);
+    setIsBusy(false);
+
+    if (deleteError) {
+      showActionError(deleteError.message || "فشل حذف الطبق");
+      setDishToDelete(null);
+      return;
+    }
+
+    setDishToDelete(null);
   }
 
   async function handleSaveDish(formData) {
@@ -197,6 +223,7 @@ export default function MenuPage() {
                     dish={dish}
                     onEdit={openEditDishModal}
                     onToggleAvailability={handleToggleAvailability}
+                    onDelete={handleRequestDeleteDish}
                   />
                 ))}
 
@@ -243,6 +270,13 @@ export default function MenuPage() {
         category={categoryToDelete}
         onClose={() => setCategoryToDelete(null)}
         onConfirm={handleConfirmDeleteCategory}
+      />
+
+      <DishDeleteModal
+        isOpen={Boolean(dishToDelete)}
+        dish={dishToDelete}
+        onClose={() => setDishToDelete(null)}
+        onConfirm={handleConfirmDeleteDish}
       />
     </div>
   );

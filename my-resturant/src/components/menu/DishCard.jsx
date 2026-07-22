@@ -1,4 +1,4 @@
-export default function DishCard({ dish, onEdit, onToggleAvailability }) {
+export default function DishCard({ dish, onEdit, onToggleAvailability, onDelete }) {
   return (
     <div className="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group hover:-translate-y-1">
       <div className="relative h-48 overflow-hidden">
@@ -26,9 +26,12 @@ export default function DishCard({ dish, onEdit, onToggleAvailability }) {
       <div className="p-6">
         <div className="flex justify-between items-start mb-2">
           <h4 className="font-headline-md text-headline-md text-on-surface">{dish.name}</h4>
-          <span className="font-headline-md text-headline-md text-primary font-bold">
-            ${(Number(dish.price) || 0).toFixed(2)}
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="font-body-lg text-body-lg text-primary font-bold">
+              {(Number(dish.price) || 0).toFixed(2)}
+            </span>
+            <span className="font-body-lg text-body-lg text-primary font-bold">ل.س</span>
+          </div>
         </div>
         <p className="text-secondary text-body-md mb-6 line-clamp-2">{dish.description}</p>
         <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
@@ -50,13 +53,22 @@ export default function DishCard({ dish, onEdit, onToggleAvailability }) {
               </span>
             </label>
           </div>
-          <button
-            type="button"
-            onClick={() => onEdit(dish)}
-            className="text-secondary hover:text-primary transition-colors p-2"
-          >
-            <span className="material-symbols-outlined">edit</span>
-          </button>
+          <div className="flex items-end gap-0">
+            <button
+              type="button"
+              onClick={() => onEdit(dish)}
+              className="text-secondary hover:text-primary transition-colors p-1"
+            >
+              <span className="material-symbols-outlined">edit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete?.(dish.id)}
+              className="text-error hover:text-error/80 transition-colors p-1"
+            >
+              <span className="material-symbols-outlined">delete</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

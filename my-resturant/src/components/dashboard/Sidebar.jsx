@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 const navItems = [
   { icon: "dashboard", label: "لوحة التحكم", to: "overview" },
   { icon: "receipt_long", label: "الطلبات", to: "orders" },
+  { icon: "campaign", label: "الوظائف", to: "jobs" },
   { icon: "restaurant_menu", label: "القائمة", to: "menu" },
   { icon: "settings", label: "الإعدادات", to: "settings" },
 ];

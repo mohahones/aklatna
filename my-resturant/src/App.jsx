@@ -6,6 +6,8 @@ import OverviewPage from "./pages/OverviewPage";
 import OrdersPage from "./pages/OrdersPage";
 import MenuPage from "./pages/MenuPage";
 import SettingsPage from "./pages/SettingsPage";
+import JobsPage from "./pages/JobsPage";
+import AddJobPage from "./pages/AddJobPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import AccountPage from "./pages/AccountPage";
 import CashPaymentPage from "./pages/CashPaymentPage";
@@ -102,6 +104,8 @@ export default function App() {
           <Route index element={<OverviewPage />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="jobs" element={<JobsPage />} />
+          <Route path="jobs/new" element={<AddJobPage />} />
           <Route path="menu" element={<MenuPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

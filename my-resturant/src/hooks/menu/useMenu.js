@@ -12,7 +12,15 @@ function mapCategory(row, dishCount = 0) {
   };
 }
 
-function mapDish(row) {
+function mapDish(row, addons = []) {
+  const normalizedAddons = Array.isArray(addons)
+    ? addons.map((addon) => ({
+        id: addon.id,
+        name: addon.name || "",
+        price: Number(addon.price) || 0,
+      }))
+    : [];
+
   return {
     id: row.id,
     categoryId: row.category_id,
@@ -27,7 +35,8 @@ function mapDish(row) {
     sortOrder: row.sort_order ?? 0,
     badge: null,
     showHoverOverlay: false,
-    ingredients: [],
+    ingredients: normalizedAddons,
+    addons: normalizedAddons,
   };
 }
 
@@ -36,6 +45,36 @@ async function getBusinessId() {
     data: { session },
   } = await supabase.auth.getSession();
   return session?.user?.id ?? null;
+}
+
+async function saveDishAddons({ businessId, itemId, categoryId, ingredients = [] }) {
+  if (!businessId || !itemId) return { error: null };
+
+  const cleanedIngredients = (Array.isArray(ingredients) ? ingredients : [])
+    .filter((item) => String(item?.name || "").trim())
+    .map((item) => ({
+      business_id: businessId,
+      item_id: itemId,
+      category_id: categoryId || null,
+      name: String(item.name || "").trim(),
+      price: Number(item.price) || 0,
+    }));
+
+  const { error: deleteError } = await supabase
+    .from("product_addons")
+    .delete()
+    .eq("business_id", businessId)
+    .eq("item_id", itemId);
+
+  if (deleteError) return { error: deleteError };
+
+  if (cleanedIngredients.length === 0) {
+    return { error: null };
+  }
+
+  const { error: insertError } = await supabase.from("product_addons").insert(cleanedIngredients);
+
+  return { error: insertError || null };
 }
 
 export default function useMenu() {
@@ -62,7 +101,7 @@ export default function useMenu() {
         return;
       }
 
-      const [categoriesResult, dishesResult] = await Promise.all([
+      const [categoriesResult, dishesResult, addonsResult] = await Promise.all([
         supabase
           .from("menu_categories")
           .select("id, business_id, name, name_ar, sort_order")
@@ -75,12 +114,38 @@ export default function useMenu() {
           )
           .eq("business_id", businessId)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("product_addons")
+          .select("id, name, price, business_id, item_id, category_id")
+          .eq("business_id", businessId),
       ]);
 
       if (categoriesResult.error) throw categoriesResult.error;
       if (dishesResult.error) throw dishesResult.error;
+      if (addonsResult.error) throw addonsResult.error;
 
-      const mappedDishes = (dishesResult.data || []).map(mapDish);
+      const addonsMap = {};
+      if (addonsResult.data) {
+        addonsResult.data.forEach((addon) => {
+          const targetItemId = addon.item_id ?? addon.category_id;
+          if (!targetItemId) return;
+
+          if (!addonsMap[targetItemId]) {
+            addonsMap[targetItemId] = [];
+          }
+          addonsMap[targetItemId].push({
+            id: addon.id,
+            name: addon.name,
+            price: addon.price,
+          });
+        });
+      }
+
+      const mappedDishes = (dishesResult.data || []).map((dish) => {
+        const dishAddons = addonsMap[dish.id] || [];
+        return mapDish(dish, dishAddons);
+      });
+      
       const countByCategory = mappedDishes.reduce((acc, dish) => {
         if (!dish.categoryId) return acc;
         acc[dish.categoryId] = (acc[dish.categoryId] || 0) + 1;
@@ -103,7 +168,13 @@ export default function useMenu() {
   }, []);
 
   useEffect(() => {
-    loadMenu();
+    const timeoutId = window.setTimeout(() => {
+      void loadMenu();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadMenu]);
 
   const refreshCategoryCounts = useCallback((nextDishes, nextCategories) => {
@@ -148,7 +219,29 @@ export default function useMenu() {
   }
 
   async function deleteCategory(categoryId) {
-    // احذف الأطباق التابعة أولاً لتجنب فشل المفتاح الأجنبي
+    const businessId = await getBusinessId();
+    if (!businessId) return { error: new Error("لا توجد جلسة") };
+
+    const { data: categoryItems, error: categoryItemsError } = await supabase
+      .from("menu_items")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("category_id", categoryId);
+
+    if (categoryItemsError) return { error: categoryItemsError };
+
+    const itemIds = (categoryItems || []).map((item) => item.id);
+
+    if (itemIds.length > 0) {
+      const { error: addonsDeleteError } = await supabase
+        .from("product_addons")
+        .delete()
+        .eq("business_id", businessId)
+        .in("item_id", itemIds);
+
+      if (addonsDeleteError) return { error: addonsDeleteError };
+    }
+
     const { error: dishesDeleteError } = await supabase
       .from("menu_items")
       .delete()
@@ -192,6 +285,16 @@ export default function useMenu() {
       is_available: true,
     };
 
+    const ingredientRows = Array.isArray(formData.ingredients)
+      ? formData.ingredients
+          .filter((item) => String(item?.name || "").trim())
+          .map((item) => ({
+            id: item.id,
+            name: String(item.name || "").trim(),
+            price: Number(item.price) || 0,
+          }))
+      : [];
+
     if (mode === "edit" && dishId) {
       const { data, error: updateError } = await supabase
         .from("menu_items")
@@ -212,7 +315,16 @@ export default function useMenu() {
 
       if (updateError) return { error: updateError };
 
-      const mapped = mapDish(data);
+      const addonsResult = await saveDishAddons({
+        businessId,
+        itemId: dishId,
+        categoryId: payload.category_id,
+        ingredients: ingredientRows,
+      });
+
+      if (addonsResult.error) return { error: addonsResult.error };
+
+      const mapped = mapDish(data, ingredientRows);
       setDishes((prev) => {
         const nextDishes = prev.map((dish) => (dish.id === dishId ? mapped : dish));
         setCategories((prevCategories) => refreshCategoryCounts(nextDishes, prevCategories));
@@ -238,7 +350,16 @@ export default function useMenu() {
 
     if (insertError) return { error: insertError };
 
-    const mapped = mapDish(data);
+    const addonsResult = await saveDishAddons({
+      businessId,
+      itemId: data.id,
+      categoryId: payload.category_id,
+      ingredients: ingredientRows,
+    });
+
+    if (addonsResult.error) return { error: addonsResult.error };
+
+    const mapped = mapDish(data, ingredientRows);
     setDishes((prev) => {
       const nextDishes = [...prev, mapped];
       setCategories((prevCategories) => refreshCategoryCounts(nextDishes, prevCategories));
@@ -273,6 +394,49 @@ export default function useMenu() {
     return { error: null };
   }
 
+  async function deleteDish(dishId) {
+    const businessId = await getBusinessId();
+    if (!businessId) return { error: new Error("لم يتم العثور على معرفة المستخدم") };
+
+    const dishToDelete = dishes.find((d) => d.id === dishId);
+    setDishes((prev) => prev.filter((dish) => dish.id !== dishId));
+
+    const { error: addonsDeleteError } = await supabase
+      .from("product_addons")
+      .delete()
+      .eq("business_id", businessId)
+      .eq("item_id", dishId);
+
+    if (addonsDeleteError) {
+      if (dishToDelete) {
+        setDishes((prev) => [...prev, dishToDelete]);
+      }
+      return { error: addonsDeleteError };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("menu_items")
+      .delete()
+      .eq("id", dishId)
+      .eq("business_id", businessId);
+
+    if (deleteError) {
+      if (dishToDelete) {
+        setDishes((prev) => [...prev, dishToDelete]);
+      }
+      return { error: deleteError };
+    }
+
+    setCategories((prevCategories) =>
+      refreshCategoryCounts(
+        dishes.filter((dish) => dish.id !== dishId),
+        prevCategories
+      )
+    );
+
+    return { error: null };
+  }
+
   const hasCategories = useMemo(() => categories.length > 0, [categories]);
 
   return {
@@ -286,5 +450,6 @@ export default function useMenu() {
     deleteCategory,
     saveDish,
     toggleDishAvailability,
+    deleteDish,
   };
 }
