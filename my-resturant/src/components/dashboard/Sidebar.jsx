@@ -10,7 +10,7 @@ const navItems = [
 
 export default function Sidebar({ onLogout }) {
   return (
-    <aside className="fixed right-0 top-0 h-full w-[260px] bg-surface-container-lowest border-l border-border-subtle shadow-sm flex flex-col py-6 px-4 z-50">
+    <aside className="h-full w-[260px] bg-surface-container-lowest border-l border-border-subtle shadow-sm flex flex-col py-6 px-4">
       <div className="mb-10 px-2 text-right">
         <h1 className="text-xl font-bold text-primary">أكلاتنا</h1>
         <p className="text-xs text-secondary opacity-70">بوابة الشركاء</p>
