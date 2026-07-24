@@ -35,14 +35,15 @@ export default function OrdersPage() {
   };
 
   const handleSendOrder = async (orderId) => {
-    await updateOrderStatus(orderId, "complete");
+    await updateOrderStatus(orderId, "delivered");
   };
 
   const counts = {
-    new: orders.filter((o) => o.status === "new").length,
+    new: orders.filter((o) => o.status === "new" && !o.scheduledFor).length,
     preparing: orders.filter((o) => o.status === "preparing").length,
     ready: orders.filter((o) => o.status === "ready").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
+    scheduled: orders.filter((o) => o.status === "new" && Boolean(o.scheduledFor)).length,
     cancelled: orders.filter((o) => o.status === "cancelled").length,
   };
 
@@ -100,7 +101,13 @@ export default function OrdersPage() {
         </KanbanColumn>
 
         <KanbanColumn title="طلبات جديدة" status="new" count={counts.new} color="bg-primary" isHidden={isFilterReady}>
-          {orders.filter((o) => o.status === "new").map((order) => (
+          {orders.filter((o) => o.status === "new" && !o.scheduledFor).map((order) => (
+            <OrderCard key={order.id} order={order} onAccept={handleShowDetails} onShowDetails={handleShowDetails} />
+          ))}
+        </KanbanColumn>
+
+        <KanbanColumn title="مجدولة" status="scheduled" count={counts.scheduled} color="bg-primary" isHidden={isFilterReady}>
+          {orders.filter((o) => o.status === "new" && Boolean(o.scheduledFor)).map((order) => (
             <OrderCard key={order.id} order={order} onAccept={handleShowDetails} onShowDetails={handleShowDetails} />
           ))}
         </KanbanColumn>

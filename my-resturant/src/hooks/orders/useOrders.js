@@ -19,7 +19,7 @@ function resolveDatabaseStatus(nextStatus) {
   if (["new", "pending", "received", "queued"].includes(status)) return "pending";
   if (["preparing", "in_progress", "processing"].includes(status)) return "preparing";
   if (["ready", "prepared"].includes(status)) return "ready";
-  if (["delivered", "complete", "completed", "fulfilled"].includes(status)) return "complete";
+  if (["delivered", "complete", "completed", "fulfilled"].includes(status)) return "completed";
   if (["cancelled", "canceled"].includes(status)) return "cancelled";
 
   return status;
@@ -85,6 +85,12 @@ function mapOrderFromRow(row) {
     itemsList: itemsArray,
     total: Number(row.total_price ?? row.total ?? row.amount ?? row.price ?? 0),
     time: formatOrderTime(row.created_at),
+    // Support scheduled / pickup time fields commonly used in different schemas
+    scheduledFor:
+      row.scheduled_for || row.scheduledAt || row.pickup_at || row.pickup_time || row.scheduled_time || row.delivery_time || row.deliver_at || null,
+    scheduledTime: formatOrderTime(
+      row.scheduled_for || row.scheduledAt || row.pickup_at || row.pickup_time || row.scheduled_time || row.delivery_time || row.deliver_at
+    ),
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     status: normalizeStatus(row.order_status ?? row.status ?? row.state),
     orderType,
@@ -177,7 +183,19 @@ export default function useOrders() {
         }
 
         const rowsForBusiness = data.filter((row) => rowMatchesBusiness(row, businessId));
-        const visibleRows = rowsForBusiness.length > 0 ? rowsForBusiness : data;
+        const scheduledCandidates = data.filter((row) =>
+          Boolean(row.scheduled_for || row.scheduledAt || row.pickup_at || row.pickup_time || row.scheduled_time || row.delivery_time || row.deliver_at)
+        );
+
+        let visibleRows = data;
+        if (rowsForBusiness.length > 0) {
+          const mapById = new Map();
+          for (const row of [...rowsForBusiness, ...scheduledCandidates]) {
+            const key = String(row.id ?? "");
+            if (!mapById.has(key)) mapById.set(key, row);
+          }
+          visibleRows = Array.from(mapById.values());
+        }
 
         setError(null);
         setOrders(sortOrdersByCreatedAsc(visibleRows.map(mapOrderFromRow)));

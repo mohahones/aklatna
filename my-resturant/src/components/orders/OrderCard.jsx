@@ -12,7 +12,12 @@ export default function OrderCard({ order, onAccept, onReady, onSend, onShowDeta
       } ${isReady ? "border-r-4 border-r-tertiary" : ""} ${isPreparing ? "border-r-4 border-r-pending-amber" : ""} ${isDelivered ? "grayscale-[0.5] opacity-80" : ""}`}
     >
       <div className="flex justify-between items-start mb-2">
-        <span className={`text-xs font-bold ${isNew ? "text-primary" : "text-secondary"}`}>{order.displayId || order.id}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold ${isNew ? "text-primary" : "text-secondary"}`}>{order.displayId || order.id}</span>
+          {order.scheduledFor ? (
+            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full uppercase font-semibold">مجدول</span>
+          ) : null}
+        </div>
         {isNew && <span className="bg-primary-container text-white px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">جديد</span>}
         {isDelivered && <span className="text-success-green material-symbols-outlined">check_circle</span>}
       </div>
@@ -23,6 +28,13 @@ export default function OrderCard({ order, onAccept, onReady, onSend, onShowDeta
         <span className="mx-1">•</span>
         <span className="text-on-surface font-bold">${order.total.toFixed(2)}</span>
       </div>
+      {order.scheduledFor && (
+        <div className="flex items-center gap-2 text-secondary text-xs mb-2">
+          <span className="material-symbols-outlined text-[14px]">schedule</span>
+          <span className="font-bold">استلام:</span>
+          <span className="text-on-surface font-bold">{order.scheduledTime}</span>
+        </div>
+      )}
       <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
         <span className="text-secondary text-[11px] flex items-center gap-1">
           <span className="material-symbols-outlined text-[14px]">schedule</span> {isDelivered ? `اكتمل في ${order.time}` : `منذ ${order.time}`}

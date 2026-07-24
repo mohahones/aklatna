@@ -39,6 +39,19 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, o
             </div>
           </div>
 
+          {selectedOrder.scheduledFor ? (
+            <div>
+              <h4 className="text-[10px] text-secondary uppercase font-bold mb-2">استلام الطلب</h4>
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined">schedule</span>
+                <div>
+                  <div className="text-sm font-semibold">الوقت المراد الاستلام فيه</div>
+                  <div className="text-on-surface">{selectedOrder.scheduledTime}</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div>
             <div className="flex justify-between items-center mb-3">
               <h4 className="text-[10px] text-secondary uppercase font-bold">الأصناف</h4>
