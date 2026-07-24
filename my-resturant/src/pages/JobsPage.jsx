@@ -27,10 +27,10 @@ export default function JobsPage() {
   };
 
   return (
-    <div className="p-8 min-w-0 max-w-full overflow-visible">
-      <div className="p-6 max-w-container-max mx-auto">
+    <div className="p-6 min-w-0 max-w-full overflow-visible">
+      <div className="max-w-7xl mx-auto">
         <JobPageHeader onAddJob={handleAddJob} />
-        <div className="flex gap-4 items-center mb-6 px-6">
+        <div className="flex flex-wrap gap-4 items-center mb-6">
           <div className="px-3 py-2 bg-white rounded-xl border border-border-subtle text-sm">الوظائف النشطة: <strong>{activeCount}</strong></div>
           <div className="px-3 py-2 bg-white rounded-xl border border-border-subtle text-sm">قيد المراجعة: <strong>{pendingCount}</strong></div>
           <div className="px-3 py-2 bg-white rounded-xl border border-border-subtle text-sm">الوظائف المغلقة: <strong>{closedCount}</strong></div>

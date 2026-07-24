@@ -4,12 +4,14 @@ function WorkingHoursRow({ entry, onChange, disabled = false }) {
   const rowClass = !entry.isOpen ? "bg-surface-container-high/30" : "hover:bg-surface-container-low";
 
   return (
-    <div className={`flex items-center justify-between p-3 rounded-lg transition-colors ${rowClass}`}>
-      <div className={`flex-1 ${!entry.isOpen ? "opacity-50" : ""}`}>
-        <p className={`font-body-md font-bold ${entry.highlight ? "text-primary" : ""}`}>{entry.day}</p>
-        <div className={`flex items-center gap-2 mt-1 ${!entry.isOpen ? "opacity-30" : ""}`} dir="ltr">
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg transition-colors ${rowClass}`}>
+      <div className={`flex-1 min-w-0 ${!entry.isOpen ? "opacity-50" : ""}`}>
+        <p className={`font-body-md font-bold ${entry.highlight ? "text-primary" : ""}`}>
+          {entry.day}
+        </p>
+        <div className={`flex flex-col sm:flex-row sm:items-center gap-2 mt-1 min-w-0 ${!entry.isOpen ? "opacity-30" : ""}`} dir="ltr">
           <input
-            className="bg-transparent border-none p-0 text-label-sm font-label-sm focus:ring-0 cursor-pointer text-right disabled:cursor-not-allowed"
+            className="w-full sm:w-auto max-w-full bg-transparent border-none p-0 text-label-sm font-label-sm focus:ring-0 cursor-pointer text-right disabled:cursor-not-allowed"
             type="time"
             value={entry.openTime}
             disabled={disabled || !entry.isOpen}
@@ -17,7 +19,7 @@ function WorkingHoursRow({ entry, onChange, disabled = false }) {
           />
           <span className="text-secondary">-</span>
           <input
-            className="bg-transparent border-none p-0 text-label-sm font-label-sm focus:ring-0 cursor-pointer text-right disabled:cursor-not-allowed"
+            className="w-full sm:w-auto max-w-full bg-transparent border-none p-0 text-label-sm font-label-sm focus:ring-0 cursor-pointer text-right disabled:cursor-not-allowed"
             type="time"
             value={entry.closeTime}
             disabled={disabled || !entry.isOpen}
@@ -25,7 +27,7 @@ function WorkingHoursRow({ entry, onChange, disabled = false }) {
           />
         </div>
       </div>
-      <div className="flex flex-col items-start gap-1">
+      <div className="mt-3 sm:mt-0 flex flex-col items-end gap-1 min-w-[90px]">
         <label className={`relative inline-flex items-center ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
           <input
             type="checkbox"

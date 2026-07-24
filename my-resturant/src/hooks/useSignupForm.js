@@ -183,6 +183,34 @@ export function useSignupForm({ onSuccess } = {}) {
     await supabase.storage.from(logoBucketName).remove([uploadedCoverPath]);
   }
 
+  async function rollbackCreatedUser(userId) {
+    if (!userId || !supabase) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData?.session?.user?.id;
+
+      if (!currentUserId || currentUserId !== userId) {
+        console.warn("Rollback skipped: current session does not match created user.", {
+          userId,
+          currentUserId,
+        });
+        return;
+      }
+
+      const { error } = await supabase.auth.deleteUser();
+      if (error) {
+        console.warn("Failed to delete auth user during rollback:", error);
+      }
+    } catch (deleteError) {
+      console.warn("Unexpected error deleting auth user during rollback:", deleteError);
+    } finally {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    }
+  }
+
   async function handleSignup(formData) {
     if (isSubmitting) return;
 
@@ -251,59 +279,15 @@ export function useSignupForm({ onSuccess } = {}) {
     let logoUrl = "";
     let uploadedCoverPath = "";
     let coverUrl = "";
+    let createdUserId = null;
 
    try {
-      // =============== المرحلة 2: رفع الصور إلى Storage ===============
-      if (formData.logoFile instanceof File) {
-        const compressedLogo = await compressLogo(formData.logoFile);
-        uploadedLogoPath = buildLogoPath(compressedLogo);
-
-        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedLogoPath, compressedLogo, {
-          contentType: compressedLogo.type || formData.logoFile.type,
-          upsert: false,
-        });
-
-        if (uploadError) {
-          throw {
-            type: "logo_upload_failed",
-            step: "رفع الشعار",
-            message: `فشل رفع شعار المطعم: ${uploadError.message}`,
-            details: uploadError
-          };
-        }
-
-        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedLogoPath);
-        logoUrl = publicData.publicUrl;
-      }
-
-      if (formData.coverFile instanceof File) {
-        const compressedCover = await compressCover(formData.coverFile);
-        uploadedCoverPath = buildCoverPath(compressedCover);
-
-        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedCoverPath, compressedCover, {
-          contentType: compressedCover.type || formData.coverFile.type,
-          upsert: false,
-        });
-
-        if (uploadError) {
-          throw {
-            type: "cover_upload_failed",
-            step: "رفع صورة الغلاف",
-            message: `فشل رفع صورة الغلاف: ${uploadError.message}`,
-            details: uploadError
-          };
-        }
-
-        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedCoverPath);
-        coverUrl = publicData.publicUrl;
-      }
-
-      // =============== المرحلة 3: تحضير بيانات ساعات العمل ===============
-      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map(dayRow => ({
+      // =============== المرحلة 2: تحضير بيانات ساعات العمل فقط بدون رفع الصور ===============
+      const hoursToInsert = normalizeOpeningHours(formData.openingHours).map((dayRow) => ({
         day_of_week: dayRow.day,
         open_time: dayRow.openTime,
         close_time: dayRow.closeTime,
-        is_closed: !dayRow.isOpen
+        is_closed: !dayRow.isOpen,
       }));
 
       // =============== المرحلة 4: Dry Run - التحقق من البيانات قبل إنشاء Auth ===============
@@ -379,8 +363,56 @@ export function useSignupForm({ onSuccess } = {}) {
           details: { user: data.user }
         };
       }
+      createdUserId = userId;
 
-      // =============== المرحلة 6: الإدراج الفعلي للبيانات ===============
+      // =============== المرحلة 6: رفع الصور بعد إنشاء الحساب ===============
+      if (formData.logoFile instanceof File) {
+        const compressedLogo = await compressLogo(formData.logoFile);
+        uploadedLogoPath = buildLogoPath(compressedLogo);
+
+        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedLogoPath, compressedLogo, {
+          contentType: compressedLogo.type || formData.logoFile.type,
+          upsert: false,
+          metadata: { business: userId },
+        });
+
+        if (uploadError) {
+          throw {
+            type: "logo_upload_failed",
+            step: "رفع الشعار بعد التسجيل",
+            message: `فشل رفع شعار المطعم بعد التسجيل: ${uploadError.message}`,
+            details: uploadError,
+          };
+        }
+
+        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedLogoPath);
+        logoUrl = publicData.publicUrl;
+      }
+
+      if (formData.coverFile instanceof File) {
+        const compressedCover = await compressCover(formData.coverFile);
+        uploadedCoverPath = buildCoverPath(compressedCover);
+
+        const { error: uploadError } = await supabase.storage.from(logoBucketName).upload(uploadedCoverPath, compressedCover, {
+          contentType: compressedCover.type || formData.coverFile.type,
+          upsert: false,
+          metadata: { business: userId },
+        });
+
+        if (uploadError) {
+          throw {
+            type: "cover_upload_failed",
+            step: "رفع صورة الغلاف بعد التسجيل",
+            message: `فشل رفع صورة الغلاف بعد التسجيل: ${uploadError.message}`,
+            details: uploadError,
+          };
+        }
+
+        const { data: publicData } = supabase.storage.from(logoBucketName).getPublicUrl(uploadedCoverPath);
+        coverUrl = publicData.publicUrl;
+      }
+
+      // =============== المرحلة 7: الإدراج الفعلي للبيانات ===============
       const { error: insertError } = await supabase.rpc(
         'register_business_with_hours',
         {
@@ -394,7 +426,7 @@ export function useSignupForm({ onSuccess } = {}) {
           p_created_at: new Date().toISOString(),
           p_business_type: formData.businessType || "restaurant",
           p_hours: hoursToInsert,
-          p_is_dry_run: false
+          p_is_dry_run: false,
         }
       );
 
@@ -418,6 +450,7 @@ export function useSignupForm({ onSuccess } = {}) {
     } catch (err) {
       await cleanupUploadedLogo(uploadedLogoPath);
       await cleanupUploadedCover(uploadedCoverPath);
+      await rollbackCreatedUser(createdUserId);
 
       // معالجة الأخطاء المحددة
       if (err.type && err.step) {

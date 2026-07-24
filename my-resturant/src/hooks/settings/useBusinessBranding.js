@@ -120,6 +120,7 @@ export default function useBusinessBranding() {
           .upload(uploadedLogoPath, compressedLogo, {
             contentType: compressedLogo.type || logoFile.type,
             upsert: false,
+            metadata: { business: businessId },
           });
 
         if (uploadError) throw uploadError;
@@ -139,6 +140,7 @@ export default function useBusinessBranding() {
           .upload(uploadedCoverPath, compressedCover, {
             contentType: compressedCover.type || coverFile.type,
             upsert: false,
+            metadata: { business: businessId },
           });
 
         if (uploadError) throw uploadError;

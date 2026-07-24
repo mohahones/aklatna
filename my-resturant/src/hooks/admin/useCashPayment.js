@@ -128,11 +128,25 @@ export function useCashPayment() {
     if (!isSupabaseConfigured || !supabase) return new Error("Supabase not configured");
 
     try {
-      const { error } = await supabase.rpc("admin_reject_signup_request", {
-        p_request_id: id,
-      });
+      // Try to locate the request to get the related business id
+      const target = requests.find((r) => r.id === id);
+      const businessId = target?.businesses?.id || target?.business?.id || target?.business_id || null;
 
-      if (error) throw error;
+      if (businessId) {
+        // Use the same RPC used by subscriptions page to delete all business data
+        const { error } = await supabase.rpc("admin_reject_and_delete_business", {
+          p_business_id: businessId,
+        });
+
+        if (error) throw error;
+      } else {
+        // Fallback: mark the signup request as rejected
+        const { error } = await supabase.rpc("admin_reject_signup_request", {
+          p_request_id: id,
+        });
+
+        if (error) throw error;
+      }
 
       setRequests((current) => current.filter((request) => request.id !== id));
       return null;

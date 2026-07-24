@@ -26,27 +26,8 @@ export default function RestaurantLayout({ onLogout }) {
       />
 
       <main className="flex-1 min-w-0">
-        <header className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-between">
-          <button
-            type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border-subtle bg-white text-on-surface shadow-sm transition hover:bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary lg:hidden"
-            onClick={() => setSidebarOpen((open) => !open)}
-            aria-label={sidebarOpen ? "إغلاق القائمة" : "فتح القائمة"}
-            aria-expanded={sidebarOpen}
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-
+        <header dir="ltr" className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="p-2 text-secondary hover:bg-surface-container-low rounded-full transition-colors relative"
-              aria-label="الإشعارات"
-            >
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
-            </button>
-
             <div
               className="h-8 w-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-xs overflow-hidden border border-border-subtle"
               title={nameAr || "المطعم"}
@@ -61,7 +42,26 @@ export default function RestaurantLayout({ onLogout }) {
                 <span>{initial}</span>
               )}
             </div>
+
+            <button
+              type="button"
+              className="p-2 text-secondary hover:bg-surface-container-low rounded-full transition-colors relative"
+              aria-label="الإشعارات"
+            >
+              <span className="material-symbols-outlined">notifications</span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
+            </button>
           </div>
+
+          <button
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border-subtle bg-white text-on-surface shadow-sm transition hover:bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary lg:hidden"
+            onClick={() => setSidebarOpen((open) => !open)}
+            aria-label={sidebarOpen ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-expanded={sidebarOpen}
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </header>
 
         <Outlet />
