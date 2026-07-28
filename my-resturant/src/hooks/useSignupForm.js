@@ -304,6 +304,8 @@ export function useSignupForm({ onSuccess } = {}) {
           p_created_at: new Date().toISOString(),
           p_business_type: formData.businessType || "restaurant",
           p_hours: hoursToInsert,
+          p_latitude: formData.locationLat,
+          p_longitude: formData.locationLng,
           p_is_dry_run: true
         }
       );
@@ -426,6 +428,8 @@ export function useSignupForm({ onSuccess } = {}) {
           p_created_at: new Date().toISOString(),
           p_business_type: formData.businessType || "restaurant",
           p_hours: hoursToInsert,
+          p_latitude: formData.locationLat,
+          p_longitude: formData.locationLng,
           p_is_dry_run: false,
         }
       );

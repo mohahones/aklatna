@@ -130,6 +130,45 @@ button:disabled {
   min-height: 100vh;
 }
 
+.map-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999;
+  margin: 0;
+  padding: 0;
+  border-radius: 0 !important;
+}
+
+.map-fullscreen .leaflet-container {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+.fullscreen-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  left: auto;
+  z-index: 10000;
+}
+
+/* Ensure map stays below modals when not fullscreen */
+.map-wrapper {
+  position: relative;
+  z-index: 0;
+}
+
+.map-wrapper .leaflet-container {
+  z-index: 0;
+}
+
+.map-wrapper .leaflet-control {
+  z-index: 5;
+}
+
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   line-height: 1;

@@ -1,3 +1,5 @@
+import LocationPicker from "../../components/auth/LocationPicker";
+
 export default function RestaurantInfoSection({
   info,
   onChange,
@@ -61,18 +63,35 @@ export default function RestaurantInfoSection({
             onChange={(e) => onChange({ ...info, phone: e.target.value })}
           />
         </div>
-        <div className="md:col-span-2 space-y-2">
-          <label className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">العنوان الفعلي</label>
-          <textarea
-            className="w-full px-4 py-3 bg-surface-container-lowest border border-border-subtle rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md text-body-md text-right disabled:opacity-60"
-            placeholder="العنوان الكامل"
-            rows={3}
-            value={info.address}
-            disabled={isLoading || isSaving}
-            onChange={(e) => onChange({ ...info, address: e.target.value })}
-          />
-        </div>
       </div>
+
+      <div className="space-y-4 mt-6">
+        <div className="flex items-center justify-between">
+          <p className="font-label-sm text-label-sm text-secondary">اختر موقع المطعم بدقة من الخريطة</p>
+        </div>
+        <LocationPicker
+          address={info.address}
+          initialCoords={info.locationLat && info.locationLng ? { lat: info.locationLat, lng: info.locationLng } : null}
+          onLocationChange={(newAddress, coords) => {
+            onChange({
+              ...info,
+              address: newAddress ?? info.address,
+              locationLat: coords?.lat ?? info.locationLat,
+              locationLng: coords?.lng ?? info.locationLng,
+            });
+          }}
+        />
+      </div>
+
+      <div className="space-y-2 mt-6">
+        <label className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">العنوان المختار من الخريطة</label>
+        <input
+          readOnly
+          className="w-full px-4 py-3 bg-surface-container-lowest border border-border-subtle rounded-lg font-body-md text-body-md text-right"
+          value={info.address || "لم يتم اختيار عنوان بعد"}
+        />
+      </div>
+
       <div className="mt-8 flex justify-start">
         <button
           type="button"

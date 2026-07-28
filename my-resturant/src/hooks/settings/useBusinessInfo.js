@@ -6,6 +6,8 @@ const EMPTY_INFO = {
   nameEn: "",
   phone: "",
   address: "",
+  locationLat: null,
+  locationLng: null,
 };
 
 export default function useBusinessInfo() {
@@ -36,7 +38,7 @@ export default function useBusinessInfo() {
 
       const { data, error: queryError } = await supabase
         .from("businesses")
-        .select("name, name_ar, phone, address")
+        .select("name, name_ar, phone, address, latitude, longitude")
         .eq("id", businessId)
         .maybeSingle();
 
@@ -51,6 +53,8 @@ export default function useBusinessInfo() {
         nameEn: data?.name || "",
         phone: data?.phone || "",
         address: data?.address || "",
+        locationLat: data?.latitude ?? null,
+        locationLng: data?.longitude ?? null,
       });
       setError(null);
     } catch (err) {
@@ -87,6 +91,8 @@ export default function useBusinessInfo() {
         name: String(nextInfo.nameEn ?? "").trim(),
         phone: String(nextInfo.phone ?? "").trim(),
         address: String(nextInfo.address ?? "").trim(),
+        latitude: nextInfo.locationLat ?? null,
+        longitude: nextInfo.locationLng ?? null,
       };
 
       if (!payload.name_ar) {
@@ -103,7 +109,7 @@ export default function useBusinessInfo() {
         .from("businesses")
         .update(payload)
         .eq("id", businessId)
-        .select("name, name_ar, phone, address")
+        .select("name, name_ar, phone, address, latitude, longitude")
         .maybeSingle();
 
       if (updateError) throw updateError;
@@ -116,6 +122,8 @@ export default function useBusinessInfo() {
         nameEn: data.name || "",
         phone: data.phone || "",
         address: data.address || "",
+        locationLat: data.latitude ?? null,
+        locationLng: data.longitude ?? null,
       };
 
       setInfo(saved);

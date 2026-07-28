@@ -1,5 +1,6 @@
 import { useState } from "react";
 import MaterialIcon from "../ui/MaterialIcon";
+import LocationPicker from "./LocationPicker";
 import { useSessionStorageState } from "../../hooks/useSessionStorageState";
 
 const inputShellClass =
@@ -17,6 +18,8 @@ export default function SignupForm({ onSubmit, isLoading = false, errors = {} })
     phone: "",
     email: "",
     address: "",
+    locationLat: null,
+    locationLng: null,
     password: "",
     passwordConfirm: "",
   });
@@ -150,6 +153,24 @@ export default function SignupForm({ onSubmit, isLoading = false, errors = {} })
       </div>
 
       {/* Business Address */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-label-sm text-label-sm text-secondary">اختر موقع المطعم بدقة من الخريطة</p>
+        </div>
+        <LocationPicker
+          address={formData.address}
+          initialCoords={formData.locationLat && formData.locationLng ? { lat: formData.locationLat, lng: formData.locationLng } : null}
+          onLocationChange={(newAddress, coords) => {
+            setFormData((prev) => ({
+              ...prev,
+              address: newAddress ?? prev.address,
+              locationLat: coords?.lat ?? prev.locationLat,
+              locationLng: coords?.lng ?? prev.locationLng,
+            }));
+          }}
+        />
+      </div>
+
       <div className="space-y-1.5">
         <label className="font-label-sm text-label-sm text-on-surface-variant mr-1" htmlFor="address">
           عنوان العمل
