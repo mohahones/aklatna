@@ -189,23 +189,26 @@ export default function LocationPicker({ address, initialCoords, onLocationChang
 
   useEffect(() => {
     if (mapInstanceRef.current) {
-      // small delay to allow layout to settle after moving element
       setTimeout(() => {
+        console.log("container size before:", mapRef.current.offsetWidth, mapRef.current.offsetHeight);
+        console.log("map size before invalidate:", mapInstanceRef.current.getSize());
         mapInstanceRef.current.invalidateSize();
+        console.log("map size after invalidate:", mapInstanceRef.current.getSize());
       }, 120);
     }
   }, [isFullScreen]);
 
-  
+
   // keep variables referenced to avoid unused-var warnings (hidden UI)
   useEffect(() => {
     console.debug("LocationPicker debug:", { status, address });
   }, [status, address]);
 
+
   return (
     <div className="space-y-3">
       <div ref={wrapperRef} className={`map-wrapper rounded-xl border border-border-subtle overflow-hidden relative ${isFullScreen ? "map-fullscreen" : ""}`}>
-        <div ref={mapRef} className={`h-64 w-full bg-surface-container-low ${isFullScreen ? "h-full" : ""}`} />
+        <div ref={mapRef} className={isFullScreen ? "h-full w-full bg-surface-container-low" : "h-64 w-full bg-surface-container-low"} />
       </div>
       {/* status hidden by user request */}
       <ConfirmModal
@@ -222,7 +225,10 @@ export default function LocationPicker({ address, initialCoords, onLocationChang
           setTimeout(() => {
             const map = mapInstanceRef.current;
             const mk = markerRef.current;
+            console.log("host size:", fullscreenHostRef.current?.offsetWidth, fullscreenHostRef.current?.offsetHeight);
+            console.log("mapEl size:", mapRef.current?.offsetWidth, mapRef.current?.offsetHeight);
             if (map) map.invalidateSize();
+            console.log("map size after:", map?.getSize());
             if (map && mk) {
               const { lat, lng } = mk.getLatLng();
               map.setView([lat, lng], 18);

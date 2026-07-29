@@ -1,8 +1,14 @@
+import { useState } from "react";
+
 export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, onCancel, isCancelling }) {
+  const [minutes, setMinutes] = useState(selectedOrder?.estimatedPreparationTime ?? "");
+  const [showValidationError, setShowValidationError] = useState(false);
+
   if (!selectedOrder) return null;
 
   const canConfirm = selectedOrder.status === "new" && typeof onConfirm === "function";
   const canCancel = selectedOrder.status === "new" && typeof onCancel === "function";
+  const shouldShowAddress = String(selectedOrder.orderType || "").toLowerCase().includes("توصيل") || String(selectedOrder.orderType || "").toLowerCase().includes("delivery");
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -33,9 +39,11 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, o
               <p className="text-xs text-secondary flex items-center gap-2">
                 <span className="material-symbols-outlined">phone</span> {selectedOrder.phone || "+966 50 123 4567"}
               </p>
-              <p className="text-xs text-secondary flex items-center gap-2">
-                <span className="material-symbols-outlined">place</span> {selectedOrder.address || "حي النرجس، الرياض"}
-              </p>
+              {shouldShowAddress ? (
+                <p className="text-xs text-secondary flex items-center gap-2">
+                  <span className="material-symbols-outlined">place</span> {selectedOrder.address || "حي النرجس، الرياض"}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -72,7 +80,7 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, o
                         <p className="text-secondary text-[11px] mt-1">الكمية: {quantity}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-on-surface">${itemTotal}</p>
+                        <p className="font-bold text-on-surface">{itemTotal} ل.س</p>
                       </div>
                     </div>
 
@@ -87,7 +95,7 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, o
                           {item.addons.map((addon) => (
                             <li key={addon.id || addon.name} className="flex justify-between text-[12px] text-secondary">
                               <span>{addon.name || addon.title || "إضافة"}</span>
-                              <span>${Number(addon.price ?? 0).toFixed(2)}</span>
+                              <span>{Number(addon.price ?? 0).toFixed(2)} ل.س</span>
                             </li>
                           ))}
                         </ul>
@@ -108,17 +116,50 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onConfirm, o
             ></textarea>
           </div>
 
-          <div className="pt-4 border-t border-border-subtle">
+          <div className="pt-4 border-t border-border-subtle space-y-4">
             <div className="flex justify-between text-base font-bold text-primary">
               <span>الإجمالي</span>
-              <span>${selectedOrder.total.toFixed(2)}</span>
+              <span>{selectedOrder.total.toFixed(2)} ل.س</span>
             </div>
+            {selectedOrder.status === "new" ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <label className="text-sm font-semibold text-secondary whitespace-nowrap">الوقت المتوقع بالدقائق</label>
+                <div className="w-full sm:w-40">
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={minutes}
+                    onChange={(event) => {
+                      setMinutes(event.target.value);
+                      setShowValidationError(false);
+                    }}
+                    placeholder="أدخل عدد الدقائق"
+                    className="w-full rounded-lg border border-border-subtle bg-surface-container-low p-3 text-sm text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  />
+                  {showValidationError && (!minutes || Number(minutes) < 1) && (
+                    <p className="mt-2 text-xs text-red-600">يرجى تعبئة الوقت المتوقع بالدقائق قبل قبول الطلب.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="p-6 bg-surface-container-low flex gap-3">
           {canConfirm ? (
             <>
-              <button onClick={onConfirm} className="flex-1 bg-primary text-on-primary py-3 rounded-lg font-bold hover:shadow-lg hover:brightness-110 active:scale-[0.98] transition-all">تأكيد وقبول الطلب</button>
+              <button
+                onClick={() => {
+                  if (!minutes || Number(minutes) < 1) {
+                    setShowValidationError(true);
+                    return;
+                  }
+                  onConfirm(minutes);
+                }}
+                className={`flex-1 py-3 rounded-lg font-bold transition-all ${!minutes || Number(minutes) < 1 ? "bg-surface-container-lowest text-secondary cursor-pointer" : "bg-primary text-on-primary hover:shadow-lg hover:brightness-110 active:scale-[0.98]"}`}
+              >
+                تأكيد وقبول الطلب
+              </button>
               <button
                 onClick={onCancel}
                 disabled={!canCancel || isCancelling}

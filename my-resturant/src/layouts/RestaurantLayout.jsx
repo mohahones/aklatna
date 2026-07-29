@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import Sidebar from "../components/dashboard/Sidebar";
 import useBusinessAvatar from "../hooks/settings/useBusinessAvatar";
 
 export default function RestaurantLayout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
   const { logoUrl, nameAr, initial } = useBusinessAvatar();
 
   return (
@@ -28,7 +29,9 @@ export default function RestaurantLayout({ onLogout }) {
       <main className="flex-1 min-w-0">
         <header dir="ltr" className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
-            <div
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/settings")}
               className="h-8 w-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-xs overflow-hidden border border-border-subtle"
               title={nameAr || "المطعم"}
             >
@@ -41,7 +44,7 @@ export default function RestaurantLayout({ onLogout }) {
               ) : (
                 <span>{initial}</span>
               )}
-            </div>
+            </button>
 
             <button
               type="button"

@@ -79,11 +79,12 @@ function mapOrderFromRow(row) {
 
   return {
     id: row.id ?? null,
-    displayId: row.id ? `#ORD-${String(row.id).slice(-4)}` : "#ORD-0000",
+    displayId: row.order_number || (row.id ? `#ORD-${String(row.id).slice(-4)}` : "#ORD-0000"),
     customer: row.customer_name || row.customer || row.name || row.user_name || row.user?.name || "عميل",
     items: Number(row.items_count ?? row.item_count ?? row.total_items ?? itemQuantity ?? 0),
     itemsList: itemsArray,
     total: Number(row.total_price ?? row.total ?? row.amount ?? row.price ?? 0),
+    estimatedPreparationTime: Number(row.estimated_preparation_time ?? row.estimatedPreparationTime ?? 0) || null,
     time: formatOrderTime(row.created_at),
     // Support scheduled / pickup time fields commonly used in different schemas
     scheduledFor:
@@ -325,10 +326,75 @@ export default function useOrders() {
     return { error: null };
   }
 
+  async function updateOrderEstimatedTime(orderId, estimatedMinutes) {
+    if (!isSupabaseConfigured || !supabase) return { error: new Error("Supabase غير مهيأة") };
+
+    const originalId = String(orderId).replace("#ORD-", "");
+    const numericId = Number(originalId);
+    const normalizedValue = Number.isNaN(numericId) ? originalId : numericId;
+
+    const resolvedTableName = await resolveOrdersTableName();
+    if (!resolvedTableName) {
+      return { error: new Error("لم يتم العثور على جدول الطلبات") };
+    }
+
+    const businessId = await getCurrentBusinessId();
+    if (!businessId) {
+      return { error: new Error("لم يتم العثور على هوية المطعم الحالي") };
+    }
+
+    const { data: existingRow, error: rowLookupError } = await supabase
+      .from(resolvedTableName)
+      .select("id, business_id")
+      .eq("id", normalizedValue)
+      .maybeSingle();
+
+    if (rowLookupError) {
+      console.error("Error looking up order row for estimated time update:", rowLookupError);
+      return { error: rowLookupError };
+    }
+
+    if (!existingRow) {
+      const missingRowError = new Error("لم يتم العثور على الطلب المطلوب");
+      console.error(missingRowError);
+      return { error: missingRowError };
+    }
+
+    if (!rowMatchesBusiness(existingRow, businessId)) {
+      const businessMismatchError = new Error("الطلب لا ينتمي لهذا المطعم");
+      console.error(businessMismatchError, existingRow, businessId);
+      return { error: businessMismatchError };
+    }
+
+    const { error } = await supabase
+      .from(resolvedTableName)
+      .update({ estimated_preparation_time: estimatedMinutes })
+      .eq("id", normalizedValue);
+
+    if (error) {
+      console.error("Error updating estimated preparation time:", error);
+      return { error };
+    }
+
+    setOrders((current) =>
+      current.map((order) =>
+        String(order.id) === String(normalizedValue)
+          ? {
+              ...order,
+              estimatedPreparationTime: estimatedMinutes,
+            }
+          : order
+      )
+    );
+
+    return { error: null, estimatedPreparationTime: estimatedMinutes };
+  }
+
   return {
     orders,
     isLoading,
     error,
     updateOrderStatus,
+    updateOrderEstimatedTime,
   };
 }

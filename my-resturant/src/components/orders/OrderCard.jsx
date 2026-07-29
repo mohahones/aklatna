@@ -26,7 +26,7 @@ export default function OrderCard({ order, onAccept, onReady, onSend, onShowDeta
         <span className="material-symbols-outlined">shopping_bag</span>
         {order.items} {order.items === 1 ? "صنف" : "أصناف"}
         <span className="mx-1">•</span>
-        <span className="text-on-surface font-bold">${order.total.toFixed(2)}</span>
+        <span className="text-on-surface font-bold">{order.total.toFixed(2)} ل.س</span>
       </div>
       {order.scheduledFor && (
         <div className="flex items-center gap-2 text-secondary text-xs mb-2">

@@ -5,19 +5,25 @@ import OrderCard from "../components/orders/OrderCard";
 import OrderDetailsModal from "../components/orders/OrderDetailsModal";
 
 export default function OrdersPage() {
-  const { orders, isLoading, error, updateOrderStatus } = useOrders();
+  const { orders, isLoading, error, updateOrderStatus, updateOrderEstimatedTime } = useOrders();
   const [isFilterReady, setIsFilterReady] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
   const handleShowDetails = (order) => setSelectedOrder(order);
 
-  const confirmAcceptance = async () => {
+  const confirmAcceptance = async (estimatedMinutes) => {
     if (!selectedOrder) return;
     if (selectedOrder.status !== "new") {
       setSelectedOrder(null);
       return;
     }
+
+    const minutes = Number(estimatedMinutes);
+    if (!Number.isNaN(minutes) && minutes > 0) {
+      await updateOrderEstimatedTime(selectedOrder.id, minutes);
+    }
+
     await updateOrderStatus(selectedOrder.id, "preparing");
     setSelectedOrder(null);
   };
@@ -114,6 +120,7 @@ export default function OrdersPage() {
       </div>
 
       <OrderDetailsModal
+        key={selectedOrder?.id ?? "order-details-modal"}
         selectedOrder={selectedOrder}
         onClose={() => setSelectedOrder(null)}
         onConfirm={confirmAcceptance}
