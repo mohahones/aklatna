@@ -12,8 +12,13 @@ createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      console.log('Service worker registered:', reg.scope);
-    }).catch(err => console.warn('SW register failed:', err));
+    try {
+      const swUrl = new URL('sw.js', document.baseURI).href;
+      navigator.serviceWorker.register(swUrl).then(reg => {
+        console.log('Service worker registered:', reg.scope);
+      }).catch(err => console.warn('SW register failed:', err));
+    } catch (e) {
+      console.warn('SW register error building URL:', e);
+    }
   });
 }
