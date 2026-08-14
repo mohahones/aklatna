@@ -39,6 +39,12 @@ const outputsWhite = [
   { size: 192, name: 'my-logo-192-white.png' },
   { size: 32, name: 'favicon-32x32-white.png' }
 ];
+// transparent rounded outputs (no white background)
+const outputsTransparent = [
+  { size: 512, name: 'my-logo-512-rounded.png' },
+  { size: 192, name: 'my-logo-192-rounded.png' },
+  { size: 32, name: 'favicon-32x32-rounded.png' }
+];
 
 const maskableOutput = { size: 512, name: 'my-logo-maskable-512.png' };
 const screenshotsDir = path.join(publicDir, 'screenshots');
@@ -87,6 +93,25 @@ const screenshots = [
         .composite([{ input: roundedBuffer, left: 0, top: 0 }])
         .png({ quality: 90 })
         .toFile(outPath);
+      console.log('Written', outPath);
+    }
+
+    // generate transparent rounded variants (no white background)
+    for (const out of outputsTransparent) {
+      const size = out.size;
+      const roundedName = out.name;
+      const outPath = path.join(iconsDir, roundedName);
+      const radius = Math.round(size * 0.16); // 16% radius
+      const svgMask = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="#fff"/></svg>`;
+
+      const resized = await sharp(srcImage).resize(size, size, { fit: 'cover' }).png().toBuffer();
+      const roundedBuffer = await sharp(resized)
+        .composite([{ input: Buffer.from(svgMask), blend: 'dest-in' }])
+        .png()
+        .toBuffer();
+
+      // save rounded transparent (no white background)
+      await sharp(roundedBuffer).toFile(outPath);
       console.log('Written', outPath);
     }
     // generate maskable icon: scale content smaller and add transparent padding to ensure safe zone
