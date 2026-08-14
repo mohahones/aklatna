@@ -33,6 +33,13 @@ const outputs = [
   { size: 32, name: 'favicon-32x32.png' }
 ];
 
+// also produce flattened (white background) versions to avoid dark edges on some OS
+const outputsWhite = [
+  { size: 512, name: 'my-logo-512-white.png' },
+  { size: 192, name: 'my-logo-192-white.png' },
+  { size: 32, name: 'favicon-32x32-white.png' }
+];
+
 const maskableOutput = { size: 512, name: 'my-logo-maskable-512.png' };
 const screenshotsDir = path.join(publicDir, 'screenshots');
 const screenshots = [
@@ -47,6 +54,16 @@ const screenshots = [
       await sharp(srcImage)
         .resize(out.size, out.size, { fit: 'cover' })
         .png({ quality: 90 })
+        .toFile(outPath);
+      console.log('Written', outPath);
+    }
+    // generate white-background versions
+    for (const out of outputsWhite) {
+      const outPath = path.join(iconsDir, out.name);
+      await sharp(srcImage)
+        .resize(out.size, out.size, { fit: 'cover' })
+        .png({ quality: 90 })
+        .flatten({ background: '#ffffff' })
         .toFile(outPath);
       console.log('Written', outPath);
     }
