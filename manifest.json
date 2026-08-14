@@ -10,24 +10,23 @@
   "theme_color": "#ffffff",
   "icons": [
     {
+      "src": "icons/my-logo-512-rounded.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "icons/my-logo-192-rounded.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/favicon-32x32-white-rounded.png",
+      "src": "icons/favicon-32x32-rounded.png",
       "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
     },
-    {
-      "src": "icons/my-logo-512-rounded.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
-    ,
     {
       "src": "icons/my-logo-maskable-512.png",
       "sizes": "512x512",
