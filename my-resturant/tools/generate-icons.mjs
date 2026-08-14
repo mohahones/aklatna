@@ -33,12 +33,38 @@ const outputs = [
   { size: 32, name: 'favicon-32x32.png' }
 ];
 
+const maskableOutput = { size: 512, name: 'my-logo-maskable-512.png' };
+const screenshotsDir = path.join(publicDir, 'screenshots');
+const screenshots = [
+  { width: 1280, height: 720, name: 'wide-1280x720.png' },
+  { width: 640, height: 960, name: 'phone-640x960.png' }
+];
+
 (async function generate() {
   try {
     for (const out of outputs) {
       const outPath = path.join(iconsDir, out.name);
       await sharp(srcImage)
         .resize(out.size, out.size, { fit: 'cover' })
+        .png({ quality: 90 })
+        .toFile(outPath);
+      console.log('Written', outPath);
+    }
+    // generate maskable icon: scale content smaller and add transparent padding to ensure safe zone
+    const maskPath = path.join(iconsDir, maskableOutput.name);
+    await sharp(srcImage)
+      .resize(420, 420, { fit: 'cover' })
+      .png({ quality: 90 })
+      .extend({ top: 46, bottom: 46, left: 46, right: 46, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .toFile(maskPath);
+    console.log('Written', maskPath);
+
+    // generate screenshots
+    if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
+    for (const shot of screenshots) {
+      const outPath = path.join(screenshotsDir, shot.name);
+      await sharp(srcImage)
+        .resize(shot.width, shot.height, { fit: 'cover' })
         .png({ quality: 90 })
         .toFile(outPath);
       console.log('Written', outPath);

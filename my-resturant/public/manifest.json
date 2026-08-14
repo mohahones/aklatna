@@ -25,7 +25,29 @@
       "src": "icons/my-logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+    ,
+    {
+      "src": "icons/my-logo-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+
+  ,
+  "screenshots": [
+    {
+      "src": "screenshots/wide-1280x720.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshots/phone-640x960.png",
+      "sizes": "640x960",
+      "type": "image/png"
     }
   ]
 }
