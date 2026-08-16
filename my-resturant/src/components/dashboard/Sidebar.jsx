@@ -5,6 +5,7 @@ const navItems = [
   { icon: "receipt_long", label: "الطلبات", to: "orders" },
   { icon: "campaign", label: "الوظائف", to: "jobs" },
   { icon: "restaurant_menu", label: "القائمة", to: "menu" },
+  { icon: "local_offer", label: "العروض", to: "offers" },
   { icon: "settings", label: "الإعدادات", to: "settings" },
 ];
 

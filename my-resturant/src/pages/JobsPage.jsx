@@ -61,13 +61,6 @@ export default function JobsPage() {
                 ))
               ) : (
                 <div className="py-24 flex flex-col items-center justify-center text-center" id="empty-state">
-                  <div className="w-48 h-48 mb-8">
-                    <img
-                      className="w-full h-full object-contain"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXsD_ae4f5xCmFJPWHgYQxqbllikp8MF0UEhh9U7xt53h3bDKAZbd0MH3nunvRntvi0c3S8KCUX6ivlkdMVTXZ_oMEAnfOiaeEtvgjARyeuur0Cnx4dlJAcJT-dFVwTaf6701r3FNdymztrO3VxCjPJg06CG7uRNudnBkFjOf7iyVFplVcQa3WtKHMegiyWFkzcShFjaIvS0yelnj_HcjIRXGHWGogeILAwHwhdhb37GUgcItpoE"
-                      alt="Empty state illustration"
-                    />
-                  </div>
                   <h3 className="text-display-lg font-display-lg text-on-surface mb-2">لا توجد وظائف منشورة حالياً</h3>
                   <p className="text-body-lg text-secondary max-w-sm mb-8">ابدأ بنشر أول وظيفة لك اليوم لجذب أفضل المواهب لمطعمك</p>
                   <button type="button" onClick={handleAddJob} className="bg-primary-container text-white px-8 py-3 rounded-2xl font-semibold shadow-lg shadow-primary-container/20">

@@ -5,6 +5,7 @@ import RecentOrders from "../components/dashboard/RecentOrders";
 import DayDetailsModal from "../components/dashboard/DayDetailsModal";
 import RenewSubscriptionButton from "../components/dashboard/RenewSubscriptionButton";
 import useSubscription, { SUBSCRIPTION_PERIOD_DAYS } from "../hooks/useSubscription";
+import useBusinessAvatar from "../hooks/settings/useBusinessAvatar";
 
 export default function OverviewPage() {
   const [chartRange, setChartRange] = useState(7);
@@ -12,6 +13,7 @@ export default function OverviewPage() {
   const [selectedDay, setSelectedDay] = useState("");
 
   const { daysLeft, progressPercent, loading: subLoading } = useSubscription();
+  const { coverUrl, rating } = useBusinessAvatar();
 
   const handleBarClick = (day) => {
     setSelectedDay(day);
@@ -19,36 +21,38 @@ export default function OverviewPage() {
   };
 
   const stats = [
-    { title: "طلبات اليوم", value: "42", icon: "shopping_bag", iconClass: "bg-secondary-container" },
-    { title: "إيرادات اليوم", value: "$1,240", icon: "payments", iconClass: "bg-secondary-container" },
-    { title: "طلبات قيد التنفيذ", value: "8", icon: "pending_actions", iconClass: "bg-tertiary-container/10" },
-    { title: "حالة الاشتراك", value: "-", icon: "verified", iconClass: "bg-primary-fixed" },
+    { title: "طلبات اليوم", value: "42", icon: "shopping_bag", iconClass: "bg-secondary-container", gridClass: "lg:col-start-1 lg:row-start-1" },
+    { title: "إيرادات اليوم", value: "$1,240", icon: "payments", iconClass: "bg-secondary-container", gridClass: "lg:col-start-2 lg:row-start-1" },
+    { title: "طلبات قيد التنفيذ", value: "8", icon: "pending_actions", iconClass: "bg-tertiary-container/10", gridClass: "lg:col-start-3 lg:row-start-1" },
+    { title: "تقييم المطعم", value: rating != null ? String(Number(rating).toFixed(1)) : "-", icon: "star", iconClass: "bg-secondary-container", gridClass: "lg:col-start-1 lg:row-start-2" },
+    { title: "حالة الاشتراك", value: "-", icon: "verified", iconClass: "bg-primary-fixed", gridClass: "lg:col-start-4 lg:row-start-1 lg:row-span-2" },
   ];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
         {stats.map((stat, idx) => (
-          <StatCard
-            key={idx}
-            title={stat.title}
-            value={stat.title === "حالة الاشتراك" ? (subLoading ? "..." : `${daysLeft} يوماً`) : stat.value}
-            icon={stat.icon}
-            iconClass={stat.iconClass}
-          >
-            {stat.title === "حالة الاشتراك" ? (
-              <>
-                <div className="flex justify-between items-center text-[10px] font-medium text-secondary">
-                  <span>ينتهي خلال {subLoading ? "..." : `${daysLeft} يوماً`}</span>
-                  <span>{subLoading ? "..." : `${SUBSCRIPTION_PERIOD_DAYS} / ${daysLeft} يوم`}</span>
-                </div>
-                <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-primary h-full rounded-full" style={{ width: `${progressPercent}%` }}></div>
-                </div>
-                <RenewSubscriptionButton />
-              </>
-            ) : null}
-          </StatCard>
+          <div key={idx} className={stat.gridClass ? stat.gridClass : ""}>
+            <StatCard
+              title={stat.title}
+              value={stat.title === "حالة الاشتراك" ? (subLoading ? "..." : `${daysLeft} يوماً`) : stat.value}
+              icon={stat.icon}
+              iconClass={stat.iconClass}
+            >
+              {stat.title === "حالة الاشتراك" ? (
+                <>
+                  <div className="flex justify-between items-center text-[10px] font-medium text-secondary">
+                    <span>ينتهي خلال {subLoading ? "..." : `${daysLeft} يوماً`}</span>
+                    <span>{subLoading ? "..." : `${SUBSCRIPTION_PERIOD_DAYS} / ${daysLeft} يوم`}</span>
+                  </div>
+                  <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-primary h-full rounded-full" style={{ width: `${progressPercent}%` }}></div>
+                  </div>
+                  <RenewSubscriptionButton />
+                </>
+              ) : null}
+            </StatCard>
+          </div>
         ))}
       </section>
 
@@ -58,7 +62,10 @@ export default function OverviewPage() {
       </div>
 
       <section className="pb-10">
-        <div className="h-48 bg-surface-container-lowest border border-border-subtle rounded-2xl overflow-hidden shadow-sm relative group cursor-pointer transition-transform hover:scale-[1.005]">
+        <div
+          className="h-48 bg-surface-container-lowest border border-border-subtle rounded-2xl overflow-hidden shadow-sm relative group cursor-pointer transition-transform hover:scale-[1.005]"
+          style={coverUrl ? { backgroundImage: `url('${coverUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+        >
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8 text-right">
             <span className="bg-primary text-white text-[10px] font-bold uppercase tracking-widest py-1 px-3 rounded-full w-max mb-3">ملف المطبخ</span>
             <h4 className="text-white text-xl font-bold">حدّث صور متجرك</h4>

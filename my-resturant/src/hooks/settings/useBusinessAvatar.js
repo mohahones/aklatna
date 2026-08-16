@@ -3,7 +3,9 @@ import { isSupabaseConfigured, supabase } from "../../supabaseClient";
 
 export default function useBusinessAvatar() {
   const [logoUrl, setLogoUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
   const [nameAr, setNameAr] = useState("");
+  const [rating, setRating] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function useBusinessAvatar() {
 
         const { data, error } = await supabase
           .from("businesses")
-          .select("logo_url, name_ar, name")
+          .select("logo_url, cover_url, name_ar, name, rating")
           .eq("id", businessId)
           .maybeSingle();
 
@@ -40,7 +42,9 @@ export default function useBusinessAvatar() {
         }
 
         setLogoUrl(data?.logo_url || "");
+        setCoverUrl(data?.cover_url || "");
         setNameAr(data?.name_ar || data?.name || "");
+        setRating(data?.rating ?? null);
       } catch (err) {
         console.error("Exception loading business avatar:", err);
       } finally {
@@ -57,5 +61,5 @@ export default function useBusinessAvatar() {
 
   const initial = (nameAr || "م").trim().charAt(0) || "م";
 
-  return { logoUrl, nameAr, initial, isLoading };
+  return { logoUrl, coverUrl, nameAr, initial, isLoading, rating };
 }

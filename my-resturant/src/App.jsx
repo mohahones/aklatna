@@ -3,6 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import RestaurantLayout from "./layouts/RestaurantLayout";
 import OverviewPage from "./pages/OverviewPage";
+import OffersPage from "./pages/OffersPage";
 import OrdersPage from "./pages/OrdersPage";
 import MenuPage from "./pages/MenuPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -103,6 +104,7 @@ export default function App() {
         >
           <Route index element={<OverviewPage />} />
           <Route path="overview" element={<OverviewPage />} />
+          <Route path="offers" element={<OffersPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="jobs" element={<JobsPage />} />
           <Route path="jobs/new" element={<AddJobPage />} />
