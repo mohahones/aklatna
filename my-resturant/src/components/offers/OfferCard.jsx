@@ -1,22 +1,70 @@
-import React from 'react';
+export default function OfferCard({ offer, onDelete, onEdit, onToggle }) {
+  const imageUrl = offer.imageUrl || offer.photo_url || offer.image || '';
+  const isEnabled = offer.isActive !== false;
+  const discountLabel = offer.discountType === 'percentage'
+    ? `${offer.discountValue || 0}%`
+    : `${offer.discountValue || 0} ر.س`;
 
-export default function OfferCard({ offer, onDelete, onEdit }) {
+  function handleToggle() {
+    const nextValue = !isEnabled;
+    onToggle?.({ ...offer, nextValue });
+  }
+
   return (
-    <div className="border border-border-subtle rounded-lg p-4 flex items-start gap-4 bg-white">
-      <div className="w-24 h-24 bg-surface-container flex-shrink-0 rounded-md overflow-hidden">
-        {offer.imageUrl ? <img src={offer.imageUrl} alt={offer.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-on-surface-variant">صورة</div>}
-      </div>
-      <div className="flex-1">
-        <h4 className="font-bold">{offer.title}</h4>
-        <p className="text-sm text-on-surface-variant">{offer.desc}</p>
-        <div className="mt-2 flex items-center gap-2 text-xs text-on-surface-variant">
-          <span>خصم: {offer.discountType === 'percentage' ? offer.discountValue + '%' : offer.discountValue + ' ر.س'}</span>
-          <span>— الحد الأدنى: {offer.minOrder} ر.س</span>
+    <div className="group rounded-2xl border border-border-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-start gap-4">
+        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-surface-container ring-1 ring-slate-200">
+          {imageUrl ? (
+            <img src={imageUrl} alt={offer.title} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm text-on-surface-variant">صورة</div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate text-lg font-bold text-on-surface">{offer.title}</h4>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+              {discountLabel}
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+            <span className="rounded-full bg-surface-container px-2 py-1">السعر الطبيعي: {offer.minOrder || 0} ل.س</span>
+          </div>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <button onClick={()=>onEdit?.(offer)} className="px-3 py-1 border rounded">تعديل</button>
-        <button onClick={()=>onDelete?.(offer.id)} className="px-3 py-1 bg-error-red text-white rounded">حذف</button>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
+        <button
+          type="button"
+          aria-label={isEnabled ? 'تعطيل العرض' : 'تفعيل العرض'}
+          className={`relative inline-flex h-7 w-12 items-center rounded-full border border-transparent transition-colors duration-200 ${isEnabled ? 'bg-primary' : 'bg-slate-300'}`}
+          onClick={handleToggle}
+        >
+          <span
+            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ${isEnabled ? 'left-1' : 'left-6'}`}
+          />
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit?.(offer)}
+            className="rounded-lg border border-border-subtle bg-white px-3 py-1.5 text-sm font-medium text-on-surface transition hover:border-primary hover:text-primary"
+          >
+            تعديل
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete?.(offer.id)}
+            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            حذف
+          </button>
+        </div>
       </div>
     </div>
   );

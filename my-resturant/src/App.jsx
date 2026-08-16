@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -35,6 +36,43 @@ function AuthLoadingScreen() {
       </div>
     </div>
   );
+}
+
+class DashboardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Dashboard render error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-surface-bg px-6 text-center">
+          <div className="max-w-md rounded-2xl border border-border-subtle bg-white p-6 shadow-sm">
+            <p className="text-xl font-bold text-on-surface">حدث خطأ في صفحة العروض</p>
+            <p className="mt-2 text-sm text-on-surface-variant">تم إيقاف انهيار الصفحة، ويمكنك إعادة المحاولة.</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
+            >
+              إعادة التحميل
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 export default function App() {
@@ -95,7 +133,9 @@ export default function App() {
               ) : userIsActive === false ? (
                 <Navigate to="/waiting" replace />
               ) : (
-                <RestaurantLayout onLogout={handleLogout} />
+                <DashboardErrorBoundary>
+                  <RestaurantLayout onLogout={handleLogout} />
+                </DashboardErrorBoundary>
               )
             ) : (
               <Navigate to="/login" replace />
@@ -104,7 +144,7 @@ export default function App() {
         >
           <Route index element={<OverviewPage />} />
           <Route path="overview" element={<OverviewPage />} />
-          <Route path="offers" element={<OffersPage />} />
+          <Route path="offers" element={<DashboardErrorBoundary><OffersPage /></DashboardErrorBoundary>} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="jobs" element={<JobsPage />} />
           <Route path="jobs/new" element={<AddJobPage />} />

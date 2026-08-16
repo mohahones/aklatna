@@ -5,11 +5,18 @@ export const DISH_IMAGE_BUCKET = "restaurant-logos";
 const MAX_FILE_SIZE_MB = 5;
 
 export async function compressDishImage(file) {
+  const fileSizeMB = file.size / (1024 * 1024);
+
+  if (fileSizeMB <= 0.5) {
+    return file;
+  }
+
   return imageCompression(file, {
-    maxSizeMB: 0.05, // ~50 كيلوبايت
-    maxWidthOrHeight: 800,
+    maxSizeMB: 0.8,
+    maxWidthOrHeight: 1200,
     useWebWorker: true,
-    initialQuality: 0.7,
+    initialQuality: 0.75,
+    fileType: file.type || "image/jpeg",
   });
 }
 
