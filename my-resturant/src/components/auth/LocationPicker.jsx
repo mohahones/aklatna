@@ -5,8 +5,8 @@ import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png?url";
 import markerIcon from "leaflet/dist/images/marker-icon.png?url";
 import markerShadow from "leaflet/dist/images/marker-shadow.png?url";
 
-const defaultCenter = { lat: 24.7136, lng: 46.6753 };
-const defaultZoom = 12;
+const defaultCenter = { lat: 33.4531651, lng: 36.2440305 };
+const defaultZoom = 13;
 
 // Fix leaflet default icon paths for Vite bundling
 delete L.Icon.Default.prototype._getIconUrl;
