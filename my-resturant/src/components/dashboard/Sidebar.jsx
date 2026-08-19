@@ -14,7 +14,7 @@ export default function Sidebar({ onLogout }) {
   const supportLink = secondaryLinks[0];
 
   return (
-    <aside className="h-screen max-h-screen w-[260px] overflow-y-auto bg-surface-container-lowest border-l border-border-subtle shadow-sm flex flex-col py-6 px-4">
+    <aside className="h-dvh max-h-dvh w-[260px] overflow-y-auto bg-surface-container-lowest border-l border-border-subtle shadow-sm flex flex-col py-6 px-4">
       <div className="mb-10 px-2 text-right">
         <h1 className="text-xl font-bold text-primary">أكلاتنا</h1>
         <p className="text-xs text-secondary opacity-70">بوابة الشركاء</p>

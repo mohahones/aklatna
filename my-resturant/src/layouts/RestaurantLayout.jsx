@@ -10,9 +10,9 @@ export default function RestaurantLayout({ onLogout }) {
   const { logoUrl, nameAr, initial } = useBusinessAvatar();
 
   return (
-    <div className="min-h-screen bg-surface-bg flex">
+    <div className="min-h-dvh bg-surface-bg flex">
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-[260px] bg-surface-container-lowest border-l border-border-subtle shadow-sm transition-transform duration-300 ease-in-out lg:translate-x-0 lg:block ${
+        className={`fixed inset-y-0 right-0 z-50 h-dvh max-h-dvh w-[260px] overflow-hidden bg-surface-container-lowest border-l border-border-subtle shadow-sm transition-transform duration-300 ease-in-out lg:translate-x-0 lg:block ${
           sidebarOpen ? "translate-x-0 max-[959px]:translate-x-0" : "max-[959px]:translate-x-full"
         }`}
       >
