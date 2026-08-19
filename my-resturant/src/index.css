@@ -165,11 +165,26 @@ button:disabled {
 }
 
 .fullscreen-close-btn {
-  position: absolute;
+  position: fixed;
   top: 1rem;
   right: 1rem;
   left: auto;
-  z-index: 10000;
+  z-index: 20002;
+}
+
+.map-editor-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 20000;
+  background: #f0f3ff;
+}
+
+.map-editor-canvas,
+.map-editor-canvas .leaflet-container {
+  width: 100%;
+  height: 100%;
 }
 
 /* Ensure map stays below modals when not fullscreen */
@@ -184,6 +199,10 @@ button:disabled {
 
 .map-wrapper .leaflet-control {
   z-index: 5;
+}
+
+.restaurant-location-marker {
+  filter: sepia(1) saturate(7) hue-rotate(335deg) brightness(0.78);
 }
 
 .material-symbols-outlined {
