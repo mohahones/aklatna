@@ -62,6 +62,48 @@ function parseOrderItems(items) {
   return [];
 }
 
+function triggerOrderAlert(order) {
+  if (!order) return;
+
+  try {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtor) {
+      const audioContext = new AudioCtor();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = 880;
+      gainNode.gain.value = 0.20;
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      setTimeout(() => {
+        oscillator.stop();
+        audioContext.close();
+      }, 1000);
+    }
+  } catch {
+    // Ignore unsupported audio contexts.
+  }
+
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification("طلب جديد", {
+        body: `${order.customer || "عميل جديد"} - ${order.displayId || "طلب جديد"}`,
+        tag: `new-order-${order.id || Date.now()}`,
+      });
+      return;
+    }
+
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }
+}
+
 function sortOrdersByCreatedAsc(orders) {
   return [...orders].sort((a, b) => {
     const aTime = new Date(a.createdAt).getTime();
@@ -224,6 +266,7 @@ export default function useOrders() {
               if (eventType === "INSERT" && newRow) {
                 const nextOrder = mapOrderFromRow(newRow);
                 setOrders((current) => sortOrdersByCreatedAsc([nextOrder, ...current.filter((order) => String(order.id) !== String(nextOrder.id))]));
+                triggerOrderAlert(nextOrder);
                 return;
               }
 

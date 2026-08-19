@@ -1,28 +1,32 @@
 import { useMemo } from "react";
+import useSalesChart from "../../hooks/useSalesChart";
 
 export default function SalesChart({ range, setRange, onBarClick }) {
-  const data = useMemo(() => {
-    if (range === 7) {
-      return [
-        { day: "الأحد", val: 40 },
-        { day: "السبت", val: 65 },
-        { day: "الجمعة", val: 55 },
-        { day: "الخميس", val: 85 },
-        { day: "الأربعاء", val: 95 },
-        { day: "الثلاثاء", val: 70 },
-        { day: "الاثنين", val: 45 },
-      ].reverse();
-    }
+  const { chartData, isLoading, error } = useSalesChart(range);
 
-    const vals = [];
-    for (let i = 0; i < 30; i++) {
-      const seed = (i + 7) * 9301 + 49297;
-      const pseudo = ((seed % 233280) / 233280) * 70 + 20;
-      vals.push({ val: Math.round(pseudo), day: null });
-    }
+  const maxValue = useMemo(() => {
+    if (!chartData.length) return 1;
+    return Math.max(...chartData.map((item) => Number(item.val || 0)), 1);
+  }, [chartData]);
 
-    return vals;
-  }, [range]);
+  if (isLoading) {
+    return (
+      <section className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-6 text-right">
+        <div className="animate-pulse space-y-4">
+          <div className="h-5 w-32 bg-surface-container-high rounded"></div>
+          <div className="h-48 w-full bg-surface-container-high rounded-xl"></div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-6 text-right">
+        <div className="text-sm text-red-500">{error}</div>
+      </section>
+    );
+  }
 
   return (
     <section className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-6 text-right">
@@ -58,21 +62,28 @@ export default function SalesChart({ range, setRange, onBarClick }) {
           ))}
         </div>
 
-        {data.map((item, idx) => (
-          <div
-            key={idx}
-            onClick={() => onBarClick(item.day || `اليوم ${30 - idx}`)}
-            className="group relative flex flex-col items-center gap-2 h-full justify-end flex-1 cursor-pointer"
-          >
+        {chartData.map((item, idx) => {
+          const label = item.day || (item.date ? new Date(item.date).getDate().toString() : `اليوم ${idx + 1}`);
+          const numericValue = Number(item.val || 0);
+          const barHeight = numericValue <= 0 ? "6px" : maxValue > 0 ? `${(numericValue / maxValue) * 100}%` : "6px";
+
+          return (
             <div
-              className={`bg-secondary-container rounded-t-lg transition-all group-hover:bg-primary/60 ${
-                range === 7 ? "w-8" : "w-2 max-w-[8px]"
-              }`}
-              style={{ height: `${item.val}%` }}
-            ></div>
-            {item.day && <span className="text-[10px] text-secondary font-medium mt-1">{item.day}</span>}
-          </div>
-        ))}
+              key={item.date || idx}
+              onClick={() => onBarClick(item.date, item.day || label)}
+              className="group relative flex flex-col items-center gap-2 h-full justify-end flex-1 cursor-pointer"
+            >
+              <div
+                className={`bg-secondary-container rounded-t-lg transition-all group-hover:bg-primary/60 ${
+                  range === 7 ? "w-8" : "w-2 max-w-[8px]"
+                }`}
+                style={{ height: barHeight }}
+                title={item.day || label}
+              ></div>
+              <span className="text-[10px] text-secondary font-medium mt-1">{label}</span>
+            </div>
+          );
+        })}
 
         {range === 30 && (
           <div className="absolute bottom-1 left-0 w-full flex justify-between px-4 text-[10px] text-secondary opacity-60">

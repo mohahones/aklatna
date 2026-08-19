@@ -39,9 +39,18 @@ function normalizeDateInput(value) {
   return date.toISOString().slice(0, 10);
 }
 
+function getTodayDateInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function OfferForm({ editingOffer = null, onCancelEdit, onSaved }) {
   const { addOffer, updateOffer } = useOffers();
   const { categories, dishes } = useMenu();
+  const todayDate = getTodayDateInputValue();
   const [activeTab, setActiveTab] = useState('custom');
   const [customForm, setCustomForm] = useState(emptyCustomForm);
   const [menuForm, setMenuForm] = useState(emptyMenuForm);
@@ -158,6 +167,30 @@ export default function OfferForm({ editingOffer = null, onCancelEdit, onSaved }
     return '';
   }
 
+  function getStartDateErrorMessage(startDate) {
+    if (!startDate) {
+      return 'تاريخ البدء مطلوب';
+    }
+
+    if (startDate < todayDate) {
+      return 'تاريخ البدء لا يمكن أن يكون قبل اليوم الحالي';
+    }
+
+    return '';
+  }
+
+  function getEndDateErrorMessage(startDate, endDate) {
+    if (!endDate) {
+      return 'تاريخ الانتهاء مطلوب';
+    }
+
+    if (startDate && endDate < startDate) {
+      return 'تاريخ الانتهاء لا يمكن أن يكون قبل تاريخ البدء';
+    }
+
+    return '';
+  }
+
   function validateForm(formData) {
     const nextErrors = {};
     const existingImageUrl = editingOffer?.imageUrl || editingOffer?.raw?.photo_url || null;
@@ -179,12 +212,14 @@ export default function OfferForm({ editingOffer = null, onCancelEdit, onSaved }
       nextErrors.discountValue = discountMessage;
     }
 
-    if (!formData.startDate) {
-      nextErrors.startDate = 'تاريخ البدء مطلوب';
+    const startDateMessage = getStartDateErrorMessage(formData.startDate);
+    if (startDateMessage) {
+      nextErrors.startDate = startDateMessage;
     }
 
-    if (!formData.endDate) {
-      nextErrors.endDate = 'تاريخ الانتهاء مطلوب';
+    const endDateMessage = getEndDateErrorMessage(formData.startDate, formData.endDate);
+    if (endDateMessage) {
+      nextErrors.endDate = endDateMessage;
     }
 
     if (!formData.imageFile && !existingImageUrl) {
@@ -388,8 +423,21 @@ export default function OfferForm({ editingOffer = null, onCancelEdit, onSaved }
           <label className="block font-label-sm text-label-sm text-on-surface-variant">تاريخ البدء</label>
           <input
             value={formData.startDate}
-            onChange={(e) => updateForm('startDate', e.target.value)}
+            onChange={(e) => {
+              const nextStartDate = e.target.value;
+              updateForm('startDate', nextStartDate);
+
+              const startDateMessage = getStartDateErrorMessage(nextStartDate);
+              const endDateMessage = getEndDateErrorMessage(nextStartDate, formData.endDate);
+
+              setErrors((prev) => ({
+                ...prev,
+                startDate: startDateMessage,
+                endDate: endDateMessage,
+              }));
+            }}
             type="date"
+            min={todayDate}
             className={`w-full px-3 py-2 rounded-lg border ${errors.startDate ? 'border-red-500' : 'border-border-subtle'}`}
           />
           {errors.startDate && <p className="mt-1 text-xs text-red-500">{errors.startDate}</p>}
@@ -398,8 +446,15 @@ export default function OfferForm({ editingOffer = null, onCancelEdit, onSaved }
           <label className="block font-label-sm text-label-sm text-on-surface-variant">تاريخ الانتهاء</label>
           <input
             value={formData.endDate}
-            onChange={(e) => updateForm('endDate', e.target.value)}
+            onChange={(e) => {
+              const nextEndDate = e.target.value;
+              updateForm('endDate', nextEndDate);
+
+              const endDateMessage = getEndDateErrorMessage(formData.startDate, nextEndDate);
+              setErrors((prev) => ({ ...prev, endDate: endDateMessage }));
+            }}
             type="date"
+            min={formData.startDate || todayDate}
             className={`w-full px-3 py-2 rounded-lg border ${errors.endDate ? 'border-red-500' : 'border-border-subtle'}`}
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate}</p>}

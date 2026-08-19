@@ -3,7 +3,7 @@ export default function OfferCard({ offer, onDelete, onEdit, onToggle }) {
   const isEnabled = offer.isActive !== false;
   const discountLabel = offer.discountType === 'percentage'
     ? `${offer.discountValue || 0}%`
-    : `${offer.discountValue || 0} ر.س`;
+    : `${offer.discountValue || 0} ل.س`;
 
   function handleToggle() {
     const nextValue = !isEnabled;

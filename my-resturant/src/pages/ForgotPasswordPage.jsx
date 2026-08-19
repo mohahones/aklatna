@@ -2,14 +2,84 @@ import { Link } from "react-router-dom";
 import BrandIdentity from "../components/auth/BrandIdentity";
 import LoginInput from "../components/auth/LoginInput";
 import { useState } from "react";
+import { isSupabaseConfigured, supabase } from "../supabaseClient";
+
+async function checkIfEmailExistsInSupabase(email) {
+  if (!supabase || typeof supabase.auth?.admin?.getUserByEmail !== "function") {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.admin.getUserByEmail(email);
+    if (error) {
+      return false;
+    }
+
+    return Boolean(data?.user);
+  } catch {
+    return null;
+  }
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setMessage("إذا كان البريد موجوداً فسيتم إرسال رابط إعادة التعيين إليه.");
+
+    if (isSubmitting) return;
+
+    const normalizedEmail = String(email || "").trim();
+
+    if (!normalizedEmail) {
+      setStatus("error");
+      setMessage("يرجى إدخال البريد الإلكتروني.");
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      setStatus("error");
+      setMessage("خدمة استعادة كلمة المرور غير مهيأة حالياً.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setStatus("loading");
+      setMessage("جاري التحقق من الحساب...");
+
+      const existsResult = await checkIfEmailExistsInSupabase(normalizedEmail);
+
+      if (existsResult === false) {
+        setStatus("error");
+        setMessage("البريد الإلكتروني خاطئ.");
+        return;
+      }
+
+      setMessage("جاري إرسال رابط الاستعادة...");
+
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/aklatna-download.html`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setStatus("success");
+      setMessage("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.");
+    } catch (error) {
+      const errorText = String(error?.message || "").toLowerCase();
+      const isUserNotFound = /user not found|invalid login credentials|email not found|not found/i.test(errorText);
+
+      setStatus("error");
+      setMessage(isUserNotFound ? "البريد الإلكتروني خاطئ." : error?.message || "حدث خطأ أثناء إرسال رابط الاستعادة.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -39,13 +109,22 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              className="btn-primary flex w-full items-center justify-center rounded-lg px-6 py-4 font-headline-md text-headline-md"
+              disabled={isSubmitting}
+              className="btn-primary flex w-full items-center justify-center rounded-lg px-6 py-4 font-headline-md text-headline-md disabled:cursor-not-allowed disabled:opacity-60"
             >
-              إرسال رابط الاستعادة
+              {isSubmitting ? "جاري الإرسال..." : "إرسال رابط الاستعادة"}
             </button>
           </form>
 
-          {message ? <p className="mt-6 font-label-sm text-label-sm text-success-green">{message}</p> : null}
+          {message ? (
+            <p
+              className={`mt-6 font-label-sm text-label-sm ${
+                status === "error" ? "text-error" : status === "success" ? "text-success-green" : "text-secondary"
+              }`}
+            >
+              {message}
+            </p>
+          ) : null}
 
           <div className="mt-8 text-center">
             <Link to="/login" className="font-bold text-primary transition-all hover:underline">
