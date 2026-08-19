@@ -12,7 +12,7 @@ export default function RestaurantLayout({ onLogout }) {
   return (
     <div className="min-h-screen bg-surface-bg flex">
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-[260px] bg-surface-container-lowest border-l border-border-subtle shadow-sm transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:block ${
+        className={`fixed inset-y-0 right-0 z-50 w-[260px] bg-surface-container-lowest border-l border-border-subtle shadow-sm transition-transform duration-300 ease-in-out lg:translate-x-0 lg:block ${
           sidebarOpen ? "translate-x-0 max-[959px]:translate-x-0" : "max-[959px]:translate-x-full"
         }`}
       >
@@ -26,7 +26,7 @@ export default function RestaurantLayout({ onLogout }) {
         onClick={() => setSidebarOpen(false)}
       />
 
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 lg:mr-[260px]">
         <header dir="ltr" className="h-16 border-b border-border-subtle bg-surface sticky top-0 z-40 flex items-center px-6 justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -46,14 +46,6 @@ export default function RestaurantLayout({ onLogout }) {
               )}
             </button>
 
-            <button
-              type="button"
-              className="p-2 text-secondary hover:bg-surface-container-low rounded-full transition-colors relative"
-              aria-label="الإشعارات"
-            >
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
-            </button>
           </div>
 
           <button

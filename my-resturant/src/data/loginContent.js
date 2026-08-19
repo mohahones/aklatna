@@ -35,7 +35,8 @@ export const messages = {
 };
 
 export const secondaryLinks = [
-  "سياسة الخصوصية",
-  "شروط الخدمة",
-  "الدعم الفني",
+  {
+    label: "الدعم الفني",
+    href: "https://mail.google.com/mail/?view=cm&fs=1&to=mohahones9@gmail.com",
+  },
 ];
