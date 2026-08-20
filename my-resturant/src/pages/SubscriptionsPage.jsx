@@ -112,39 +112,42 @@ export default function SubscriptionsPage({ onLogout }) {
   }
 
   return (
-    <AdminLayout title="عرض المشتركين" onLogout={onLogout}>
-      <header className="mb-6 rounded-2xl border border-border-subtle bg-white/90 p-6 shadow-sm">
-        <h1 className="font-headline-md text-headline-md">عرض المشتركين</h1>
-        <p className="mt-1 text-sm text-on-surface-variant">
+    <AdminLayout title="إدارة الاشتراكات" onLogout={onLogout}>
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <header className="text-right">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">مركز العمليات</p>
+          <h1 className="mt-1 text-2xl font-bold leading-tight text-on-surface">إدارة الاشتراكات</h1>
+          <p className="mt-2 text-sm text-secondary">
           المشتركين الذين تمت الموافقة عليهم وكم تبقى لهم من الاشتراك.
-        </p>
-      </header>
+          </p>
+        </header>
 
-      <SubscriptionStats
-        activeCount={stats.activeCount}
-        expiringSoonCount={stats.expiringSoonCount}
-        expiredCount={stats.expiredCount}
-      />
+        <SubscriptionStats
+          activeCount={stats.activeCount}
+          expiringSoonCount={stats.expiringSoonCount}
+          expiredCount={stats.expiredCount}
+        />
 
-      {isLoading ? (
-        <div className="rounded-3xl border border-border-subtle bg-white/90 p-10 text-center text-sm text-on-surface-variant">
-          جاري تحميل بيانات المشتركين...
-        </div>
-      ) : error ? (
-        <div className="rounded-3xl border border-error-red/20 bg-error-red/10 p-8 text-center text-sm text-error-red">
-          {error}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <SubscribersTable subscribers={enhancedSubscribers} />
-          <RenewalRequestsTable
-            requests={renewalRequests}
-            onApprove={openRenewConfirm}
-            onReject={openRejectConfirm}
-          />
-          <ExpiredSubscribersTable subscribers={stats.expiredSubscribers} onDelete={openDeleteConfirm} />
-        </div>
-      )}
+        {isLoading ? (
+          <div className="rounded-xl border border-border-subtle bg-surface-container-lowest p-10 text-center text-sm text-secondary shadow-sm">
+            جاري تحميل بيانات المشتركين...
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-error-red/20 bg-error-red/10 p-8 text-center text-sm text-error-red">
+            {error}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <SubscribersTable subscribers={enhancedSubscribers} />
+            <RenewalRequestsTable
+              requests={renewalRequests}
+              onApprove={openRenewConfirm}
+              onReject={openRejectConfirm}
+            />
+            <ExpiredSubscribersTable subscribers={stats.expiredSubscribers} onDelete={openDeleteConfirm} />
+          </div>
+        )}
+      </div>
 
       <ConfirmModal
         isOpen={confirmDelete.open}

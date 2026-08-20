@@ -1,12 +1,14 @@
 export default function SubscribersTable({ subscribers }) {
   return (
-    <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-on-surface">قائمة المشتركين</h2>
-      <p className="mt-1 text-sm text-on-surface-variant">معلومات عن كل مشترك ووقت انتهاء الاشتراك.</p>
+    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface-container-lowest shadow-sm">
+      <div className="border-b border-border-subtle px-6 py-5 text-right">
+        <h2 className="text-lg font-bold text-on-surface">قائمة المشتركين</h2>
+        <p className="mt-1 text-sm text-secondary">معلومات عن كل مشترك ووقت انتهاء الاشتراك.</p>
+      </div>
 
-      <div className="mt-6 overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-right text-sm">
-          <thead className="bg-surface-container text-on-surface-variant">
+          <thead className="bg-surface-container-low text-secondary">
             <tr>
               <th className="border-b border-border-subtle px-4 py-3 font-semibold">اسم المطعم</th>
               <th className="border-b border-border-subtle px-4 py-3 font-semibold">الهاتف</th>
@@ -18,7 +20,7 @@ export default function SubscribersTable({ subscribers }) {
           <tbody>
             {subscribers.length > 0 ? (
               subscribers.map((subscriber, index) => (
-                <tr key={subscriber.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
+                <tr key={subscriber.id} className="transition-colors hover:bg-surface-container-low">
                   <td className="border-b border-border-subtle px-4 py-4 align-top">
                     <p className="font-semibold">{subscriber.name_ar || "غير معروف"}</p>
                   </td>
@@ -48,7 +50,7 @@ export default function SubscribersTable({ subscribers }) {
                 </tr>
               ))
             ) : (
-              <tr className="bg-white">
+              <tr className="bg-surface-container-lowest">
                 <td colSpan="5" className="px-4 py-8 text-center text-sm text-on-surface-variant">
                   لا يوجد مشتركين لعرضهم حالياً.
                 </td>
@@ -57,6 +59,6 @@ export default function SubscribersTable({ subscribers }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }

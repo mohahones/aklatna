@@ -10,19 +10,20 @@ export function SidebarSection({  onLogout }) {
   };
 
   return (
-    <aside className="w-full bg-sidebar-bg px-6 py-8 text-sidebar-text lg:w-[260px] lg:shrink-0">
-      <div className="mb-8">
-        <p className="text-xl font-bold text-black">لوحة التحكم</p>
+    <aside className="flex h-dvh max-h-dvh w-[260px] flex-col overflow-y-auto bg-surface-container-lowest px-4 py-6 text-right">
+      <div className="mb-10 px-2">
+        <p className="text-xl font-bold text-primary">أكلاتنا</p>
+        <p className="text-xs text-secondary opacity-70">لوحة الإدارة</p>
       </div>
 
-      <nav className="space-y-2">
+      <nav className="flex-1 space-y-1">
         <button
           type="button"
           onClick={() => navigate("/cash-payment")}
-          className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
             isActive("cash-payment")
-              ? "bg-primary-container text-white"
-              : "text-black hover:bg-white/10"
+              ? "bg-secondary-container font-bold text-on-secondary-container"
+              : "text-secondary hover:bg-surface-container-low"
           }`}
         >
           <MaterialIcon name="payments" className="text-lg" filled />
@@ -31,10 +32,10 @@ export function SidebarSection({  onLogout }) {
         <button
           type="button"
           onClick={() => navigate("/subscriptions")}
-          className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
             isActive("subscriptions")
-              ? "bg-primary-container text-white"
-              : "text-black hover:bg-white/10"
+              ? "bg-secondary-container font-bold text-on-secondary-container"
+              : "text-secondary hover:bg-surface-container-low"
           }`}
         >
           <MaterialIcon name="subscriptions" className="text-lg" filled />
@@ -42,11 +43,11 @@ export function SidebarSection({  onLogout }) {
         </button>
       </nav>
 
-      <div className="mt-6 border-t border-white/10 pt-4">
+      <div className="mt-auto border-t border-border-subtle pt-6">
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-white lg:text-black transition hover:bg-white/10"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-error transition-colors hover:bg-error-container/20"
         >
           <MaterialIcon name="logout" className="text-lg" />
           <span>تسجيل الخروج</span>

@@ -39,6 +39,8 @@ export default function CashPaymentPage({ onLogout }) {
   }, [requests, selectedStatuses, timeRange]);
 
   const pendingCount = requests.filter((request) => request.status === "pending").length;
+  const acceptedCount = requests.filter((request) => request.status === "accepted").length;
+  const rejectedCount = requests.filter((request) => request.status === "rejected").length;
   const collectedToday = requests
     .filter((request) => {
       const requestDate = request.createdAt ? new Date(request.createdAt) : null;
@@ -115,11 +117,12 @@ export default function CashPaymentPage({ onLogout }) {
 
   return (
     <AdminLayout title="إدارة طلبات الدفع النقدي" onLogout={onLogout}>
-      <div className="space-y-6">
-        <header className="hidden lg:flex flex-col gap-4 rounded-2xl border border-border-subtle bg-white/80 p-6 shadow-sm backdrop-blur md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <header className="flex flex-col gap-5 text-right md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="font-headline-md text-headline-md text-on-surface">إدارة طلبات الدفع النقدي</h1>
-            <p className="mt-1 text-sm text-on-surface-variant">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">مركز العمليات</p>
+            <h1 className="mt-1 text-2xl font-bold leading-tight text-on-surface">إدارة طلبات الدفع النقدي</h1>
+            <p className="mt-2 text-sm text-secondary">
               مراجعة واعتماد عمليات الدفع اليدوية من شركاء المطاعم.
             </p>
           </div>
@@ -134,18 +137,30 @@ export default function CashPaymentPage({ onLogout }) {
           />
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           <StatisticCard
             icon="pending_actions"
             label="قيد الانتظار"
             value={pendingCount}
-            color="bg-primary/10 text-primary"
+            color="bg-tertiary-container/10 text-tertiary"
           />
           <StatisticCard
             icon="payments"
             label="تم التحصيل اليوم"
             value={`${collectedToday}.00`}
-            color="bg-success-green/10 text-success-green"
+            color="bg-secondary-container text-on-secondary-container"
+          />
+          <StatisticCard
+            icon="verified"
+            label="طلبات مقبولة"
+            value={acceptedCount}
+            color="bg-primary-fixed text-primary"
+          />
+          <StatisticCard
+            icon="cancel"
+            label="طلبات مرفوضة"
+            value={rejectedCount}
+            color="bg-error-container text-error"
           />
         </section>
 

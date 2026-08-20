@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
       setMessage("جاري إرسال رابط الاستعادة...");
 
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/aklatna-download.html`,
+        redirectTo: "https://amer-kriany.github.io/aklatna_confirm/reset-password.html",
       });
 
       if (error) {

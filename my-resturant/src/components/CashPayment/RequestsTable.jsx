@@ -31,7 +31,7 @@ export function RequestsTable({ filteredRequests, onApprove, onReject }) {
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle bg-surface-container-low/30 px-4 py-4">
-        <h2 className="font-title-md text-title-md">الطلبات المعلقة</h2>
+        <h2 className="text-lg font-bold text-on-surface">طلبات الدفع</h2>
         <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs text-on-surface-variant">
           إجمالي: {filteredRequests.length} طلب
         </span>

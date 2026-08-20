@@ -2,17 +2,17 @@ import { formatDate } from "../../../utils/dateUtils";
 
 export default function RenewalRequestsTable({ requests, onApprove, onReject }) {
   return (
-    <div className="rounded-3xl border border-border-subtle bg-white/90 p-6 shadow-sm">
-      <div className="border-b border-border-subtle bg-surface-container px-4 py-4">
-        <h2 className="text-lg font-semibold text-on-surface">طلبات تجديد الاشتراك</h2>
-        <p className="text-sm text-on-surface-variant">
+    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface-container-lowest shadow-sm">
+      <div className="border-b border-border-subtle px-6 py-5 text-right">
+        <h2 className="text-lg font-bold text-on-surface">طلبات تجديد الاشتراك</h2>
+        <p className="mt-1 text-sm text-secondary">
           الطلبات التي تم إرسالها من صفحة تجديد الاشتراك في انتظار المراجعة.
         </p>
       </div>
 
-      <div className="mt-6 overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-right text-sm">
-          <thead className="bg-surface-container text-on-surface-variant">
+          <thead className="bg-surface-container-low text-secondary">
             <tr>
               <th className="border-b border-border-subtle px-4 py-3 font-semibold">اسم المطعم</th>
               <th className="border-b border-border-subtle px-4 py-3 font-semibold">الهاتف</th>
@@ -23,7 +23,7 @@ export default function RenewalRequestsTable({ requests, onApprove, onReject }) 
           <tbody>
             {requests.length > 0 ? (
               requests.map((request, index) => (
-                <tr key={request.id} className={index % 2 === 0 ? "bg-white" : "bg-surface-container"}>
+                <tr key={request.id} className="transition-colors hover:bg-surface-container-low">
                   <td className="border-b border-border-subtle px-4 py-4 align-top">
                     <p className="font-semibold">{request.businesses?.name || "غير معروف"}</p>
                   </td>
@@ -38,14 +38,14 @@ export default function RenewalRequestsTable({ requests, onApprove, onReject }) 
                       <button
                         type="button"
                         onClick={() => onApprove(request)}
-                        className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90"
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                       >
                         تجديد الاشتراك
                       </button>
                       <button
                         type="button"
                         onClick={() => onReject(request)}
-                        className="rounded-full border border-error-red/30 bg-error-red/10 px-3 py-1 text-xs font-semibold text-error-red transition hover:bg-error-red/20"
+                        className="rounded-lg border border-error-red/30 bg-error-red/10 px-3 py-1.5 text-xs font-semibold text-error-red transition hover:bg-error-red/20"
                       >
                         رفض التجديد
                       </button>
@@ -54,7 +54,7 @@ export default function RenewalRequestsTable({ requests, onApprove, onReject }) 
                 </tr>
               ))
             ) : (
-              <tr className="bg-white">
+              <tr className="bg-surface-container-lowest">
                 <td colSpan="4" className="px-4 py-8 text-center text-sm text-on-surface-variant">
                   لا توجد طلبات تجديد حالياً.
                 </td>
@@ -63,6 +63,6 @@ export default function RenewalRequestsTable({ requests, onApprove, onReject }) 
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
