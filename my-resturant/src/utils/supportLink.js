@@ -1,4 +1,4 @@
-export function getSupportHref({ href, webHref, appHref }) {
+export function getSupportHref({ href, webHref, appHref, androidAppHref }) {
   const desktopHref = webHref ?? href;
 
   if (typeof navigator === "undefined") {
@@ -6,7 +6,12 @@ export function getSupportHref({ href, webHref, appHref }) {
   }
 
   const isIPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || isIPad;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile = isAndroid || /iPhone|iPad|iPod/i.test(navigator.userAgent) || isIPad;
+
+  if (isAndroid && androidAppHref) {
+    return androidAppHref;
+  }
 
   return isMobile && appHref ? appHref : desktopHref;
 }
@@ -14,7 +19,7 @@ export function getSupportHref({ href, webHref, appHref }) {
 export function openSupportLink(event, link) {
   const appHref = getSupportHref(link);
 
-  if (appHref === (link.webHref ?? link.href) || !link.appHref) {
+  if (appHref === (link.webHref ?? link.href) || (!link.appHref && !link.androidAppHref)) {
     return;
   }
 
