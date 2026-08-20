@@ -38,5 +38,5 @@ export function openSupportLink(event, link) {
   fallbackTimer = window.setTimeout(() => {
     cleanup();
     window.location.href = link.webHref ?? link.href;
-  }, 1200);
+  }, 3000);
 }
