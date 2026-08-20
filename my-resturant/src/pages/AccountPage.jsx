@@ -82,20 +82,6 @@ export default function AccountPage() {
                             </div>
                         )}
 
-                        <div className="mb-8 space-y-4">
-                            {[
-                                "طلبات غير محدودة",
-                                "دعم فني ذو أولوية 24/7",
-                                "هوية قائمة مخصصة",
-                                "إدارة المخزون المتقدمة",
-                            ].map((item) => (
-                                <div key={item} className="flex items-center gap-3">
-                                    <MaterialIcon name="check_circle" className="text-success-green" />
-                                    <span className="font-body-md text-body-md">{item}</span>
-                                </div>
-                            ))}
-                        </div>
-
                         <div className="mb-8 rounded-xl border border-primary/20 bg-primary-fixed px-4 py-4 text-center">
                             <p className="flex items-center justify-center gap-2 font-body-md text-body-md font-semibold text-on-primary-fixed-variant">
                                 <MaterialIcon name="payments" className="text-lg" />
@@ -126,6 +112,12 @@ export default function AccountPage() {
                                         ? message
                                         : submitMessage || "حدث خطأ أثناء إنشاء الحساب"}
                                 </p>
+                                {isSubmitted || status === "success" ? (
+                                    <p className="mt-3 flex items-center justify-center gap-2 border-t border-success-green/20 pt-3 text-sm font-semibold leading-relaxed">
+                                        <MaterialIcon name="mark_email_read" className="text-lg" />
+                                        وصلك بريد تحقق، يرجى تأكيد حسابك قبل تسجيل الدخول.
+                                    </p>
+                                ) : null}
                                 {errorDetails?.code || errorDetails?.status ? (
                                     <p className="mt-2 text-xs leading-relaxed opacity-90">
                                         {[
@@ -162,6 +154,10 @@ export default function AccountPage() {
                             <p className="mb-8 max-w-md font-body-md text-body-md text-secondary">
                                 سيتم الرد خلال 24 ساعة. شكراً لثقتك بأكلاتنا.
                             </p>
+                            <div className="mb-8 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary-fixed px-4 py-3 text-center text-sm font-semibold leading-relaxed text-on-primary-fixed-variant">
+                                <MaterialIcon name="mark_email_read" className="shrink-0 text-lg" />
+                                <span>وصلك بريد تحقق، يرجى تأكيد حسابك قبل تسجيل الدخول.</span>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => navigate("/waiting", { replace: true })}
