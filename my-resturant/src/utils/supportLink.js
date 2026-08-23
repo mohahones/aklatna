@@ -23,8 +23,6 @@ export function openSupportLink(event, link) {
     return;
   }
 
-  event.preventDefault();
-
   let fallbackTimer;
   const cleanup = () => {
     window.clearTimeout(fallbackTimer);
@@ -32,9 +30,9 @@ export function openSupportLink(event, link) {
     window.removeEventListener("pagehide", cleanup);
   };
 
+  event.currentTarget.href = appHref;
   document.addEventListener("visibilitychange", cleanup);
   window.addEventListener("pagehide", cleanup);
-  window.location.href = appHref;
   fallbackTimer = window.setTimeout(() => {
     cleanup();
     window.location.href = link.webHref ?? link.href;
