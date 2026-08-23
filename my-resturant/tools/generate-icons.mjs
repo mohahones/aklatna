@@ -4,6 +4,7 @@ import sharp from 'sharp';
 
 const publicDir = path.resolve(process.cwd(), 'public');
 const iconsDir = path.join(publicDir, 'icons');
+const cleanedPath = path.join(iconsDir, 'my-logo-cleaned.png');
 const candidates = [
   'my-logo.png',
   'my-logo.jpg',
@@ -114,12 +115,21 @@ const screenshots = [
       await sharp(roundedBuffer).toFile(outPath);
       console.log('Written', outPath);
     }
-    // generate maskable icon: scale content smaller and add transparent padding to ensure safe zone
+    // generate maskable icon with an opaque logo-colored background so transparent padding is not rendered black
     const maskPath = path.join(iconsDir, maskableOutput.name);
-    await sharp(srcImage)
+    const maskableLogo = await sharp(fs.existsSync(cleanedPath) ? cleanedPath : srcImage)
       .resize(420, 420, { fit: 'cover' })
       .png({ quality: 90 })
-      .extend({ top: 46, bottom: 46, left: 46, right: 46, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .toBuffer();
+    await sharp({
+      create: {
+        width: 512,
+        height: 512,
+        channels: 4,
+        background: { r: 244, g: 234, b: 223, alpha: 1 }
+      }
+    })
+      .composite([{ input: maskableLogo, left: 46, top: 46 }])
       .toFile(maskPath);
     console.log('Written', maskPath);
 

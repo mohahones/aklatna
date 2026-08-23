@@ -28,49 +28,37 @@ if (!srcImage) {
 
 if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
 
-function avgColorAt(img, width, height, data, x0, y0, w, h) {
-  let r = 0, g = 0, b = 0, count = 0;
-  for (let y = y0; y < Math.min(y0 + h, height); y++) {
-    for (let x = x0; x < Math.min(x0 + w, width); x++) {
-      const idx = (y * width + x) * 4;
-      r += data[idx];
-      g += data[idx + 1];
-      b += data[idx + 2];
-      count++;
-    }
-  }
-  return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
-}
-
 async function makeTransparentBackground(buffer) {
   const image = sharp(buffer);
   const { width, height } = await image.metadata();
   const raw = await image.ensureAlpha().raw().toBuffer();
 
-  // sample 10x10 blocks at corners
-  const sample = 10;
-  const tl = avgColorAt(image, width, height, raw, 0, 0, sample, sample);
-  const tr = avgColorAt(image, width, height, raw, width - sample, 0, sample, sample);
-  const bl = avgColorAt(image, width, height, raw, 0, height - sample, sample, sample);
-  const br = avgColorAt(image, width, height, raw, width - sample, height - sample, sample, sample);
+  const isBorderBackground = (index) => raw[index] < 120 && raw[index + 1] < 120 && raw[index + 2] < 120;
+  const visited = new Uint8Array(width * height);
+  const queue = [];
 
-  const bg = [Math.round((tl[0] + tr[0] + bl[0] + br[0]) / 4),
-              Math.round((tl[1] + tr[1] + bl[1] + br[1]) / 4),
-              Math.round((tl[2] + tr[2] + bl[2] + br[2]) / 4)];
+  for (let x = 0; x < width; x++) {
+    queue.push(x, (height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    queue.push(y * width, y * width + width - 1);
+  }
 
-  // threshold distance to consider as background
-  const thresh = 80; // increased to catch more beige-like backgrounds
+  while (queue.length > 0) {
+    const pixel = queue.pop();
+    if (visited[pixel]) continue;
+    visited[pixel] = 1;
 
-  for (let i = 0; i < raw.length; i += 4) {
-    const dr = raw[i] - bg[0];
-    const dg = raw[i + 1] - bg[1];
-    const db = raw[i + 2] - bg[2];
-    const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-    if (dist < thresh) {
-      raw[i + 3] = 0; // make transparent
-    } else {
-      raw[i + 3] = 255;
-    }
+    const index = pixel * 4;
+    if (!isBorderBackground(index)) continue;
+    raw[index + 3] = 0;
+
+    const x = pixel % width;
+    const y = Math.floor(pixel / width);
+    if (x > 0) queue.push(pixel - 1);
+    if (x < width - 1) queue.push(pixel + 1);
+    if (y > 0) queue.push(pixel - width);
+    if (y < height - 1) queue.push(pixel + width);
   }
 
   return { data: raw, width, height };
@@ -117,6 +105,24 @@ async function generateAll() {
       await sharp(roundedBuffer).toFile(outPath);
       console.log('Written', outPath);
     }
+
+    const maskablePath = path.join(iconsDir, 'my-logo-maskable-512.png');
+    const maskableLogo = await sharp(cleanedPath)
+      .resize(420, 420, { fit: 'cover' })
+      .png()
+      .toBuffer();
+    await sharp({
+      create: {
+        width: 512,
+        height: 512,
+        channels: 4,
+        background: { r: 244, g: 234, b: 223, alpha: 1 }
+      }
+    })
+      .composite([{ input: maskableLogo, left: 46, top: 46 }])
+      .png()
+      .toFile(maskablePath);
+    console.log('Written', maskablePath);
 
     // generate ICO from rounded PNGs (32, 192, 512)
     const icoInputs = [
