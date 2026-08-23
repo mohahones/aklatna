@@ -18,8 +18,17 @@ export function getSupportHref({ href, webHref, appHref, androidAppHref }) {
 
 export function openSupportLink(event, link) {
   const appHref = getSupportHref(link);
+  const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (appHref === (link.webHref ?? link.href) || (!link.appHref && !link.androidAppHref)) {
+    return;
+  }
+
+  event.preventDefault();
+  window.location.assign(appHref);
+
+  // Android intent URLs handle their own browser fallback.
+  if (isAndroid) {
     return;
   }
 
@@ -30,7 +39,6 @@ export function openSupportLink(event, link) {
     window.removeEventListener("pagehide", cleanup);
   };
 
-  event.currentTarget.href = appHref;
   document.addEventListener("visibilitychange", cleanup);
   window.addEventListener("pagehide", cleanup);
   fallbackTimer = window.setTimeout(() => {
