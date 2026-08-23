@@ -39,6 +39,6 @@ export const secondaryLinks = [
     label: "الدعم الفني",
     href: "https://mail.google.com/mail/?view=cm&fs=1&to=mohahones9@gmail.com",
     appHref: "googlegmail://co?to=mohahones9@gmail.com",
-    androidAppHref: "intent://co?to=mohahones9%40gmail.com#Intent;scheme=googlegmail;package=com.google.android.gm;S.browser_fallback_url=https%3A%2F%2Fmail.google.com%2Fmail%2F%3Fview%3Dcm%26fs%3D1%26to%3Dmohahones9%2540gmail.com;end",
+    androidAppHref: "intent://co?to=mohahones9%40gmail.com#Intent;scheme=googlegmail;package=com.google.android.gm;end",
   },
 ];
