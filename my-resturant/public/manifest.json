@@ -10,10 +10,10 @@
   "theme_color": "#f4eadf",
   "icons": [
     {
-      "src": "icons/my-logo-512-rounded.png",
+      "src": "icons/my-logo-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     },
     {
       "src": "icons/my-logo-192-rounded.png",
@@ -28,10 +28,10 @@
       "purpose": "any"
     },
     {
-      "src": "icons/my-logo-maskable-512.png",
+      "src": "icons/my-logo-512-rounded.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ]
 

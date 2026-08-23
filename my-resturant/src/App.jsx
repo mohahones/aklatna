@@ -29,10 +29,14 @@ function AccountRouteWrapper({ currentUser }) {
 
 function AuthLoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-bg px-4 text-center">
-      <div className="space-y-2">
+    <div className="auth-loading-screen flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <div className="space-y-5">
+        <img
+          src={`${import.meta.env.BASE_URL}icons/my-logo-cleaned.png`}
+          alt="aklatna"
+          className="mx-auto h-44 w-44 object-contain"
+        />
         <p className="font-headline-md text-headline-md text-on-surface">جاري تحميل الجلسة...</p>
-        <p className="font-body-md text-body-md text-secondary">يتم التحقق من حالة تسجيل الدخول الحالية.</p>
       </div>
     </div>
   );

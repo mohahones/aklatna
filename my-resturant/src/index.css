@@ -99,6 +99,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.auth-loading-screen {
+  background: #f4eadf;
+}
+
 * {
   box-sizing: border-box;
 }
