@@ -9,7 +9,7 @@ export default function SecondaryLinks({ onSoftAction }) {
             key={link.label}
             href={getSupportHref(link)}
             target={getSupportHref(link)?.startsWith("http") ? "_blank" : undefined}
-            onClick={(event) => openSupportLink(event, link)}
+            onClick={() => openSupportLink(link)}
           rel="noreferrer"
           className="inline-flex items-center gap-2 font-body-lg text-body-lg font-semibold text-secondary transition-colors hover:text-on-surface"
         >

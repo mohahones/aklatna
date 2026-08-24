@@ -41,7 +41,7 @@ export default function Sidebar({ onLogout }) {
         <a
           href={supportHref}
           target={supportHref.startsWith("http") ? "_blank" : undefined}
-          onClick={(event) => openSupportLink(event, supportLink)}
+          onClick={() => openSupportLink(supportLink)}
           rel="noreferrer"
           className="mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-secondary transition-colors hover:bg-surface-container-low hover:text-on-surface"
         >

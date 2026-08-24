@@ -16,13 +16,10 @@ export function getSupportHref({ href, webHref, appHref, androidAppHref }) {
   return isMobile && appHref ? appHref : desktopHref;
 }
 
-export function openSupportLink(event, link) {
+export function openSupportLink(link) {
   const appHref = getSupportHref(link);
 
   if (appHref === (link.webHref ?? link.href) || (!link.appHref && !link.androidAppHref)) {
     return;
   }
-
-  event.preventDefault();
-  window.location.assign(appHref);
 }
