@@ -1,7 +1,7 @@
 import { messages, secondaryLinks } from "../../data/loginContent";
-import { getSupportHref, openSupportLink } from "../../utils/supportLink";
+import { getSupportHref } from "../../utils/supportLink";
 
-export default function SecondaryLinks({ onSoftAction }) {
+export default function SecondaryLinks() {
   return (
     <nav className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3" aria-label={messages.secondaryNav}>
         {secondaryLinks.map((link) => (
@@ -9,7 +9,6 @@ export default function SecondaryLinks({ onSoftAction }) {
             key={link.label}
             href={getSupportHref(link)}
             target={getSupportHref(link)?.startsWith("http") ? "_blank" : undefined}
-            onClick={() => openSupportLink(link)}
           rel="noreferrer"
           className="inline-flex items-center gap-2 font-body-lg text-body-lg font-semibold text-secondary transition-colors hover:text-on-surface"
         >
